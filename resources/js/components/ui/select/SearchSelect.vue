@@ -1,47 +1,39 @@
 <script setup lang="ts">
 import Multiselect from '@vueform/multiselect'
 import '@vueform/multiselect/themes/default.css'
-import { computed } from 'vue';
 
 interface Option {
-    value: string | number;
-    label: string;
+  value: string | number;
+  label: string;
 }
 
 const props = defineProps<{
-    modelValue?: string | number;
-    options: Option[];
-    placeholder?: string;
-    searchable?: boolean;
-    disabled?: boolean;
+  modelValue?: string | number | null;
+  options: Option[];
+  placeholder?: string;
+  searchable?: boolean;
+  disabled?: boolean;
 }>();
 
 const emit = defineEmits<{
-    (e: 'update:modelValue', value: string | number): void;
+  (e: 'update:modelValue', value: string | number | null): void;
 }>();
-
-const selectedOption = computed({
-    get: () => props.modelValue ? props.options.find(option => option.value === props.modelValue) : null,
-    set: (value: Option | null) => emit('update:modelValue', value?.value ?? '')
-});
-
-defineOptions({
-    name: 'SearchSelect'
-});
 </script>
 
 <template>
-    <Multiselect
-        v-model="selectedOption"
-        :options="options"
-        :searchable="searchable"
-        :disabled="disabled"
-        :placeholder="placeholder"
-        :multiple="false"
-        track-by="value"
-        label="label"
-    />
+  <Multiselect
+    :model-value="modelValue"
+    @update:modelValue="emit('update:modelValue', $event)"
+    :options="options"
+    :searchable="searchable"
+    :disabled="disabled"
+    :placeholder="placeholder"
+    :multiple="false"
+    track-by="value"
+    label="label"
+  />
 </template>
+
 
 <style>
 .multiselect-wrapper {

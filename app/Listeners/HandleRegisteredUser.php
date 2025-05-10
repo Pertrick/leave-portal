@@ -29,12 +29,13 @@ class HandleRegisteredUser implements ShouldQueue
     public function handle(Registered $event): void
     {
         $user = $event->user;
+        $password = $event->password;
 
         // Create default settings for the user
         $user->settings()->create(UserSetting::getDefaults());
 
-        // Send welcome notification to the new user
-        $user->notify(new WelcomeNotification($user));
+        // Send welcome notification with login credentials
+        $user->notify(new WelcomeNotification($user, $password));
 
         // Notify administrators
         $admins = User::role('admin')->get();

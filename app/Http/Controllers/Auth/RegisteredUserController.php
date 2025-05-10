@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Providers\RouteServiceProvider;
 
 class RegisteredUserController extends Controller
 {
@@ -60,14 +61,16 @@ class RegisteredUserController extends Controller
                 'password' => Hash::make($validated['password']),
             ]);
 
-            event(new Registered($user));
+            $employeeRole = Role::firstOrCreate(['name' => 'Employee']);
+            $user->assignRole($employeeRole);
 
-            // Update AccountRequest status
+            event(new Registered($user, $validated['password']));
+
             AccountRequest::processed($validated['staff_id'], $user->id);
-
+            
             DB::commit();
 
-            return redirect()->route('dashboard')->with('success', 'Registration successful! Welcome to the portal.');
+            return redirect()->back()->with('success', 'Account Created Successfully!');
         } catch (\Exception $e) {
             DB::rollBack();
             

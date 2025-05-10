@@ -37,7 +37,8 @@ class DatabaseSeeder extends Seeder
             LeaveEntitlementSeeder::class,
             ApprovalLevelSeeder::class,
             RoleSeeder::class,
-            AdminUserSeeder::class
+            AdminUserSeeder::class,
+            BreadcrumbSeeder::class,
         ]);
     }
 }

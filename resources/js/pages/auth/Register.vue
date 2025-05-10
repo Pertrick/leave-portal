@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { SearchSelect } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
 import { ToastService } from '@/services/toast';
+import { computed, watch } from 'vue';
 
 const props = defineProps<{
     departments: Array<{ id: number; name: string }>;
@@ -21,8 +22,8 @@ const form = useForm({
     email: '',
     phone: '',
     address: '',
-    department_id: '',
-    user_level_id: '',
+    user_level_id: null as number | null,
+    department_id: null as number | null,
     designation: '',
     gender: '',
     dob: '',
@@ -31,7 +32,161 @@ const form = useForm({
     password_confirmation: '',
 });
 
+// Watch for changes in firstname and lastname to update username
+watch(
+    [() => form.firstname, () => form.lastname],
+    ([newFirstname, newLastname]) => {
+        if (newFirstname && newLastname) {
+            // Convert to lowercase and remove spaces
+            const firstname = newFirstname.toLowerCase().trim();
+            const lastname = newLastname.toLowerCase().trim();
+            
+            // Generate username: firstname.lastname
+            form.username = `${firstname}.${lastname}`;
+        }
+    }
+);
+
+// Watch all form fields to clear errors when user starts typing
+const formFields = [
+    'staff_id',
+    'username',
+    'firstname',
+    'lastname',
+    'email',
+    'phone',
+    'address',
+    'department_id',
+    'user_level_id',
+    'designation',
+    'gender',
+    'dob',
+    'join_date',
+    'password',
+    'password_confirmation'
+] as const;
+
+// Create watchers for each form field
+formFields.forEach(field => {
+    watch(() => form[field], () => {
+        if (form.errors[field]) {
+            form.clearErrors(field);
+        }
+    });
+});
+
+// Validation rules
+const validateForm = () => {
+    const errors: Record<string, string> = {};
+
+    // Staff ID validation
+    if (!form.staff_id) {
+        errors.staff_id = 'Staff ID is required';
+    } else if (form.staff_id.length < 3) {
+        errors.staff_id = 'Staff ID must be at least 3 characters';
+    }
+
+    // Username validation
+    if (!form.username) {
+        errors.username = 'Username is required';
+    } else if (form.username.length < 3) {
+        errors.username = 'Username must be at least 3 characters';
+    } else if (!/^[a-zA-Z0-9._]+$/.test(form.username)) {
+        errors.username = 'Username can only contain letters, numbers, dots, and underscores';
+    }
+
+    // First name validation
+    if (!form.firstname) {
+        errors.firstname = 'First name is required';
+    } else if (form.firstname.length < 2) {
+        errors.firstname = 'First name must be at least 2 characters';
+    }
+
+    // Last name validation
+    if (!form.lastname) {
+        errors.lastname = 'Last name is required';
+    } else if (form.lastname.length < 2) {
+        errors.lastname = 'Last name must be at least 2 characters';
+    }
+
+    // Email validation
+    if (!form.email) {
+        errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+        errors.email = 'Please enter a valid email address';
+    }
+
+    // Phone validation (optional but must be valid if provided)
+    if (form.phone && !/^\+?[\d\s-]{10,}$/.test(form.phone)) {
+        errors.phone = 'Please enter a valid phone number';
+    }
+
+    // Department validation
+    if (!form.department_id) {
+        errors.department_id = 'Department is required';
+    }
+
+    // User level validation
+    if (!form.user_level_id) {
+        errors.user_level_id = 'User level is required';
+    }
+
+    // Gender validation (optional but must be valid if provided)
+    if (form.gender && !['male', 'female', 'other'].includes(form.gender)) {
+        errors.gender = 'Please select a valid gender';
+    }
+
+    // Date of birth validation (optional but must be valid if provided)
+    if (form.dob) {
+        const dobDate = new Date(form.dob);
+        const today = new Date();
+        if (dobDate > today) {
+            errors.dob = 'Date of birth cannot be in the future';
+        }
+    }
+
+    // Join date validation
+    if (!form.join_date) {
+        errors.join_date = 'Join date is required';
+    } else {
+        const joinDate = new Date(form.join_date);
+        const today = new Date();
+        if (joinDate > today) {
+            errors.join_date = 'Join date cannot be in the future';
+        }
+    }
+
+    // Password validation
+    if (!form.password) {
+        errors.password = 'Password is required';
+    } else if (form.password.length < 8) {
+        errors.password = 'Password must be at least 8 characters';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(form.password)) {
+        errors.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
+    }
+
+    // Password confirmation validation
+    if (!form.password_confirmation) {
+        errors.password_confirmation = 'Please confirm your password';
+    } else if (form.password !== form.password_confirmation) {
+        errors.password_confirmation = 'Passwords do not match';
+    }
+
+    return errors;
+};
+
 const submit = () => {
+    const errors = validateForm();
+    
+    if (Object.keys(errors).length > 0) {
+        // Set form errors
+        Object.entries(errors).forEach(([field, message]) => {
+            form.setError(field as keyof typeof form, message);
+        });
+        ToastService.error('Please correct the errors in the form.');
+        return;
+    }
+
     form.post(route('register'), {
         onSuccess: () => {
             ToastService.success('Registration successful! Welcome to the portal.');
@@ -63,7 +218,6 @@ const submit = () => {
                                         <Input
                                             id="staff_id"
                                             type="text"
-                                            required
                                             autofocus
                                             v-model="form.staff_id"
                                             placeholder="Staff ID"
@@ -72,23 +226,10 @@ const submit = () => {
                                     </div>
 
                                     <div class="grid gap-2">
-                                        <Label for="username">Username</Label>
-                                        <Input
-                                            id="username"
-                                            type="text"
-                                            required
-                                            v-model="form.username"
-                                            placeholder="Username"
-                                        />
-                                        <InputError :message="form.errors.username" />
-                                    </div>
-
-                                    <div class="grid gap-2">
                                         <Label for="firstname">First Name</Label>
                                         <Input
                                             id="firstname"
                                             type="text"
-                                            required
                                             v-model="form.firstname"
                                             placeholder="First name"
                                         />
@@ -100,11 +241,21 @@ const submit = () => {
                                         <Input
                                             id="lastname"
                                             type="text"
-                                            required
                                             v-model="form.lastname"
                                             placeholder="Last name"
                                         />
                                         <InputError :message="form.errors.lastname" />
+                                    </div>
+
+                                    <div class="grid gap-2">
+                                        <Label for="username">Username</Label>
+                                        <Input
+                                            id="username"
+                                            type="text"
+                                            v-model="form.username"
+                                            placeholder="Username"
+                                        />
+                                        <InputError :message="form.errors.username" />
                                     </div>
                                 </div>
 
@@ -115,7 +266,6 @@ const submit = () => {
                                         <Input
                                             id="email"
                                             type="email"
-                                            required
                                             v-model="form.email"
                                             placeholder="email@example.com"
                                         />
@@ -148,6 +298,7 @@ const submit = () => {
                                     <div class="grid gap-2">
                                         <Label for="user_level_id">User Level</Label>
                                         <SearchSelect
+                                            v-if="userLevels.length"
                                             id="user_level_id"
                                             v-model="form.user_level_id"
                                             :options="userLevels.map(level => ({ value: level.id, label: level.name }))"
@@ -202,7 +353,6 @@ const submit = () => {
                                         <Input
                                             id="join_date"
                                             type="date"
-                                            required
                                             v-model="form.join_date"
                                         />
                                         <InputError :message="form.errors.join_date" />
@@ -226,7 +376,6 @@ const submit = () => {
                                         <Input
                                             id="password"
                                             type="password"
-                                            required
                                             v-model="form.password"
                                             placeholder="Create password"
                                         />
@@ -238,7 +387,6 @@ const submit = () => {
                                         <Input
                                             id="password_confirmation"
                                             type="password"
-                                            required
                                             v-model="form.password_confirmation"
                                             placeholder="Confirm password"
                                         />

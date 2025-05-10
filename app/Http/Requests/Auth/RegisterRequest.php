@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Auth;
 
 use App\Models\User;
+use App\Models\AccountRequest;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules;
 
@@ -23,7 +24,7 @@ class RegisterRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'staff_id' => ['required', 'string', 'max:255', 'unique:users'],
             'username' => ['required', 'string', 'max:255', 'unique:users'],
             'firstname' => ['required', 'string', 'max:255'],
@@ -39,6 +40,21 @@ class RegisterRequest extends FormRequest
             'join_date' => ['required', 'date'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ];
+
+        // Add pending request check if enabled in config
+        if (config('account.require_pending_request')) {
+            $rules['staff_id'][] = function ($attribute, $value, $fail) {
+                $request = AccountRequest::where('staff_id', $value)
+                    ->where('status', config('account.request_status.pending'))
+                    ->first();
+
+                if (!$request) {
+                    $fail('The Staff Id does not have a pending Account Request.');
+                }
+            };
+        }
+
+        return $rules;
     }
 
     /**

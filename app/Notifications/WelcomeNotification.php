@@ -16,7 +16,8 @@ class WelcomeNotification extends Notification implements ShouldQueue
      * Create a new notification instance.
      */
     public function __construct(
-        protected User $user
+        protected User $user,
+        protected string $password
     ) {}
 
     /**
@@ -26,7 +27,7 @@ class WelcomeNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return ['mail'];
     }
 
     /**
@@ -38,7 +39,12 @@ class WelcomeNotification extends Notification implements ShouldQueue
             ->subject('Welcome to the Leave Portal')
             ->greeting("Hello {$this->user->first_name}!")
             ->line('Welcome to the Leave Portal. Your account has been successfully created.')
-            ->line('You can now log in to the portal using your email and password.')
+            ->line('Here are your login credentials:')
+            ->line("Email: {$this->user->email}")
+            ->line("Staff ID: {$this->user->staff_id}")
+            ->line("Password: {$this->password}")
+            ->line('For security reasons, please change your password after your first login.')
+            ->line('You can now log in to the portal using either your email or staff ID along with your password.')
             ->line('If you have any questions or need assistance, please contact your department administrator or HR.')
             ->action('Log in to Leave Portal', route('login'))
             ->line('Thank you for using our application!');
