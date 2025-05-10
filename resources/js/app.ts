@@ -1,11 +1,14 @@
+import './bootstrap';
 import '../css/app.css';
 
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
-import { ZiggyVue } from 'ziggy-js';
+import { ZiggyVue } from '../../vendor/tightenco/ziggy/dist/vue.m';
 import { initializeTheme } from './composables/useAppearance';
+import Toast from 'vue-toastification';
+import 'vue-toastification/dist/index.css';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -26,9 +29,15 @@ createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) => resolvePageComponent(`./pages/${name}.vue`, import.meta.glob<DefineComponent>('./pages/**/*.vue')),
     setup({ el, App, props, plugin }) {
-        createApp({ render: () => h(App, props) })
-            .use(plugin)
+        const app = createApp({ render: () => h(App, props) });
+
+        app.use(plugin)
             .use(ZiggyVue)
+            .use(Toast, {
+                transition: 'Vue-Toastification__bounce',
+                maxToasts: 3,
+                newestOnTop: true,
+            })
             .mount(el);
     },
     progress: {

@@ -19,5 +19,15 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        $this->call([
+            LeaveSettingsSeeder::class,
+            LocationSeeder::class,
+            DepartmentSeeder::class,
+            LeaveTypeSeeder::class,
+            UserLevelSeeder::class,
+            HolidaySeeder::class,
+            LeaveEntitlementSeeder::class
+        ]);
     }
 }

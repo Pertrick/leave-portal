@@ -1,26 +1,32 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Models\Department;
 use App\Models\User;
+use App\Models\UserLevel;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class RegisteredUserController extends Controller
 {
     /**
-     * Show the registration page.
+     * Display the registration view.
      */
     public function create(): Response
     {
-        return Inertia::render('auth/Register');
+        return Inertia::render('auth/Register', [
+            'departments' => Department::select('id', 'name')->get(),
+            'userLevels' => UserLevel::select('id', 'name')->get(),
+        ]);
     }
 
     /**
@@ -28,24 +34,36 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(RegisterRequest $request): RedirectResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ]);
+        try {
+            $validated = $request->validated();
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+            $user = User::create([
+                'staff_id' => $validated['staff_id'],
+                'username' => $validated['username'],
+                'firstname' => $validated['firstname'],
+                'lastname' => $validated['lastname'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'] ?? null,
+                'address' => $validated['address'] ?? null,
+                'department_id' => $validated['department_id'],
+                'user_level_id' => $validated['user_level_id'],
+                'designation' => $validated['designation'] ?? null,
+                'gender' => $validated['gender'] ?? null,
+                'dob' => $validated['dob'] ?? null,
+                'join_date' => $validated['join_date'],
+                'password' => Hash::make($validated['password']),
+            ]);
 
-        event(new Registered($user));
+            event(new Registered($user));
 
-        Auth::login($user);
 
-        return to_route('dashboard');
+            return redirect()->route('dashboard')->with('success', 'Registration successful! Welcome to the portal.');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Registration failed. Please try again.')
+                ->withInput();
+        }
     }
 }

@@ -28,4 +28,10 @@ export default defineConfig({
             'ziggy-js': resolve(__dirname, 'vendor/tightenco/ziggy'),
         },
     },
+    build: {
+        sourcemap: true,
+    },
+    optimizeDeps: {
+        include: ['axios'],
+    },
 });
