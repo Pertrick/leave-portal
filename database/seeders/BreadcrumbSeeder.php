@@ -13,7 +13,7 @@ class BreadcrumbSeeder extends Seeder
         $dashboard = Breadcrumb::create([
             'path' => 'dashboard',
             'title' => 'Dashboard',
-            'roles' => ['admin', 'manager', 'staff'],
+            'roles' => ['admin', 'manager', 'employee'],
             'icon' => 'home',
             'order' => 1
         ]);
@@ -22,7 +22,7 @@ class BreadcrumbSeeder extends Seeder
         $leave = Breadcrumb::create([
             'path' => 'leave',
             'title' => 'Leave Management',
-            'roles' => ['admin', 'manager', 'staff'],
+            'roles' => ['admin', 'manager', 'employee'],
             'icon' => 'calendar',
             'order' => 2
         ]);
@@ -32,7 +32,7 @@ class BreadcrumbSeeder extends Seeder
             'path' => 'apply',
             'title' => 'Apply Leave',
             'parent_id' => $leave->id,
-            'roles' => ['admin', 'manager', 'staff'],
+            'roles' => ['admin', 'manager', 'employee'],
             'icon' => 'file-plus',
             'order' => 1
         ]);
@@ -41,7 +41,7 @@ class BreadcrumbSeeder extends Seeder
             'path' => 'history',
             'title' => 'Leave History',
             'parent_id' => $leave->id,
-            'roles' => ['admin', 'manager', 'staff'],
+            'roles' => ['admin', 'manager', 'employee'],
             'icon' => 'history',
             'order' => 2
         ]);
@@ -133,7 +133,7 @@ class BreadcrumbSeeder extends Seeder
         Breadcrumb::create([
             'path' => 'profile',
             'title' => 'Profile',
-            'roles' => ['admin', 'manager', 'staff'],
+            'roles' => ['admin', 'manager', 'employee'],
             'icon' => 'user',
             'order' => 7
         ]);
