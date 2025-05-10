@@ -27,7 +27,14 @@ class AccountRequest extends Model
         return $this->belongsTo(User::class, 'processed_by');
     }
 
-    public static function proceessed($staffId){
-        $this->
+    public static function processed(string $staffId, ?int $processedBy = null): void
+    {
+        self::where('staff_id', $staffId)
+            ->where('status', 'pending')
+            ->update([
+                'status' => 'approved',
+                'processed_by' => $processedBy,
+                'processed_at' => now()
+            ]);
     }
 } 

@@ -4,8 +4,8 @@
         class="flex h-10 w-full items-center justify-between rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 ring-offset-white dark:ring-offset-gray-900 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         :class="{ 'opacity-50': disabled }"
         :disabled="disabled"
-        @click="toggle"
-        :aria-expanded="select?.open"
+        @click="handleClick"
+        :aria-expanded="select?.isOpen"
     >
         <slot />
         <svg
@@ -29,8 +29,8 @@
 import { inject } from 'vue';
 
 interface SelectContext {
-    open: boolean;
-    setOpen: (value: boolean) => void;
+    isOpen: boolean;
+    toggle: () => void;
 }
 
 const props = defineProps<{
@@ -39,9 +39,9 @@ const props = defineProps<{
 
 const select = inject<SelectContext>('select');
 
-const toggle = () => {
-    if (select) {
-        select.setOpen(!select.open);
+const handleClick = () => {
+    if (!props.disabled && select) {
+        select.toggle();
     }
 };
 </script> 

@@ -15,54 +15,55 @@
     (e: 'update:modelValue', value: string | number): void;
   }>();
   
-  const open = ref(false);
-  const selectedValue = ref({ value: props.modelValue });
-  const searchQuery = ref<string>('');
+  const isOpen = ref(false);
+  const selectedValue = ref(props.modelValue);
+  const searchQuery = ref('');
   
-  function setOpen(val: boolean) {
-    open.value = val;
-    if (!val) {
+  function toggle() {
+    isOpen.value = !isOpen.value;
+    if (!isOpen.value) {
       searchQuery.value = '';
     }
   }
   
-  function setValue(val: string | number) {
-    selectedValue.value = { value: val };
-    emit('update:modelValue', val);
-    setOpen(false);
+  function selectValue(value: string | number) {
+    selectedValue.value = value;
+    emit('update:modelValue', value);
+    isOpen.value = false;
+    searchQuery.value = '';
   }
   
-  function setSearchQuery(query: string) {
+  function updateSearch(query: string) {
     searchQuery.value = query;
   }
   
-  const context = {
-    open,
+  provide('select', {
+    isOpen,
     selectedValue,
     searchQuery,
-    setOpen,
-    setValue,
-    setSearchQuery,
-  };
-  
-  provide('select', context);
+    toggle,
+    selectValue,
+    updateSearch
+  });
   
   const root = ref();
   
   function handleClickOutside(event: MouseEvent) {
     if (root.value && !root.value.contains(event.target as Node)) {
-      setOpen(false);
+      isOpen.value = false;
+      searchQuery.value = '';
     }
   }
   
   function handleEscape(event: KeyboardEvent) {
     if (event.key === 'Escape') {
-      setOpen(false);
+      isOpen.value = false;
+      searchQuery.value = '';
     }
   }
   
   watch(() => props.modelValue, (newValue) => {
-    selectedValue.value = { value: newValue };
+    selectedValue.value = newValue;
   });
   
   onMounted(() => {

@@ -4,7 +4,7 @@ import { LoaderCircle } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchSelect } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
 import { ToastService } from '@/services/toast';
 
@@ -135,41 +135,25 @@ const submit = () => {
 
                                     <div class="grid gap-2">
                                         <Label for="department_id">Department</Label>
-                                        <Select v-model="form.department_id">
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select department" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem 
-                                                    v-for="dept in departments" 
-                                                    :key="dept.id" 
-                                                    :value="dept.id"
-                                                    :label="dept.name"
-                                                >
-                                                    {{ dept.name }}
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchSelect
+                                            id="department_id"
+                                            v-model="form.department_id"
+                                            :options="departments.map(dept => ({ value: dept.id, label: dept.name }))"
+                                            placeholder="Select department"
+                                            searchable
+                                        />
                                         <InputError :message="form.errors.department_id" />
                                     </div>
 
                                     <div class="grid gap-2">
                                         <Label for="user_level_id">User Level</Label>
-                                        <Select v-model="form.user_level_id">
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select user level" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem 
-                                                    v-for="level in userLevels" 
-                                                    :key="level.id" 
-                                                    :value="level.id"
-                                                    :label="level.name"
-                                                >
-                                                    {{ level.name }}
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchSelect
+                                            id="user_level_id"
+                                            v-model="form.user_level_id"
+                                            :options="userLevels.map(level => ({ value: level.id, label: level.name }))"
+                                            placeholder="Select user level"
+                                            searchable
+                                        />
                                         <InputError :message="form.errors.user_level_id" />
                                     </div>
                                 </div>
@@ -200,16 +184,16 @@ const submit = () => {
 
                                     <div class="grid gap-2">
                                         <Label for="gender">Gender</Label>
-                                        <Select v-model="form.gender">
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select gender" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="male" label="Male">Male</SelectItem>
-                                                <SelectItem value="female" label="Female">Female</SelectItem>
-                                                <SelectItem value="other" label="Other">Other</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchSelect
+                                            id="gender"
+                                            v-model="form.gender"
+                                            :options="[
+                                                { value: 'male', label: 'Male' },
+                                                { value: 'female', label: 'Female' },
+                                                { value: 'other', label: 'Other' }
+                                            ]"
+                                            placeholder="Select gender"
+                                        />
                                         <InputError :message="form.errors.gender" />
                                     </div>
 

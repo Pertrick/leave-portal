@@ -3,7 +3,7 @@
         v-if="isVisible"
         class="cursor-pointer px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700"
         :class="{ 'bg-gray-100 dark:bg-gray-700': isSelected }"
-        @click="selectItem"
+        @click="handleClick"
     >
         <slot />
     </div>
@@ -13,10 +13,9 @@
 import { inject, computed } from 'vue';
 
 interface SelectContext {
-    open: boolean;
-    selectedValue: { value: string | number };
+    selectedValue: string | number;
     searchQuery: string;
-    setValue: (value: string | number) => void;
+    selectValue: (value: string | number) => void;
 }
 
 const select = inject<SelectContext>('select');
@@ -25,15 +24,17 @@ const props = defineProps<{
     label?: string;
 }>();
 
-const isSelected = computed(() => select?.selectedValue.value === props.value);
+const isSelected = computed(() => select?.selectedValue === props.value);
 const isVisible = computed(() => {
-    if (!select?.searchQuery || typeof select.searchQuery !== 'string') return true;
+    if (!select?.searchQuery) return true;
     const searchLower = select.searchQuery.toLowerCase();
     const label = props.label || String(props.value);
     return label.toLowerCase().includes(searchLower);
 });
 
-function selectItem() {
-    select?.setValue(props.value);
+function handleClick() {
+    if (select) {
+        select.selectValue(props.value);
+    }
 }
 </script> 

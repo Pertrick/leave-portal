@@ -1,6 +1,6 @@
 <template>
     <div
-        v-if="select?.open"
+        v-if="select?.isOpen"
         class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto"
     >
         <div class="p-2 border-b border-gray-200 dark:border-gray-700">
@@ -22,9 +22,9 @@
 import { inject, ref, watch } from 'vue';
 
 interface SelectContext {
-    open: boolean;
+    isOpen: boolean;
     searchQuery: string;
-    setSearchQuery: (query: string) => void;
+    updateSearch: (query: string) => void;
 }
 
 const select = inject<SelectContext>('select');
@@ -33,15 +33,15 @@ const searchInput = ref('');
 function handleSearch(event: Event) {
     const input = event.target as HTMLInputElement;
     if (select) {
-        select.setSearchQuery(input.value);
+        select.updateSearch(input.value);
     }
 }
 
-watch(() => select?.open, (isOpen) => {
+watch(() => select?.isOpen, (isOpen) => {
     if (!isOpen) {
         searchInput.value = '';
         if (select) {
-            select.setSearchQuery('');
+            select.updateSearch('');
         }
     }
 });

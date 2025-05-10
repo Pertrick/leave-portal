@@ -13,6 +13,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -38,6 +39,8 @@ class RegisteredUserController extends Controller
     public function store(RegisterRequest $request): RedirectResponse
     {
         try {
+            DB::beginTransaction();
+
             $validated = $request->validated();
 
             $user = User::create([
@@ -57,14 +60,17 @@ class RegisteredUserController extends Controller
                 'password' => Hash::make($validated['password']),
             ]);
 
-            //update AccountRequest Service
-            AccountRequest::processed();
-
             event(new Registered($user));
 
+            // Update AccountRequest status
+            AccountRequest::processed($validated['staff_id'], $user->id);
+
+            DB::commit();
 
             return redirect()->route('dashboard')->with('success', 'Registration successful! Welcome to the portal.');
         } catch (\Exception $e) {
+            DB::rollBack();
+            
             return redirect()->back()
                 ->with('error', 'Registration failed. Please try again.')
                 ->withInput();

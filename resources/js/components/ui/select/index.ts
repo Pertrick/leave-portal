@@ -10,4 +10,6 @@ export {
     SelectItem,
     SelectTrigger,
     SelectValue
-}; 
+};
+
+export { default as SearchSelect } from './SearchSelect.vue'; 
