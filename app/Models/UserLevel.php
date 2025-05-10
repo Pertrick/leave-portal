@@ -12,13 +12,11 @@ class UserLevel extends Model
 {
     protected $fillable = [
         'name',
-        'level',
-        'max_leave_days'
+        'level'
     ];
 
     protected $casts = [
-        'level' => 'integer',
-        'max_leave_days' => 'integer'
+        'level' => 'integer'
     ];
 
     public function users(): HasMany

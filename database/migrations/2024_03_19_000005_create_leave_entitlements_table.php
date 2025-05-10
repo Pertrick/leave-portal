@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('leave_entitlements', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_level_id')->constrained()->onDelete('cascade');
-            $table->foreignId('leave_type_id')->constrained()->onDelete('cascade');
-            $table->boolean('can_carry_over')->default(true);
+            $table->foreignId('user_level_id')->constrained('user_levels')->onDelete('cascade');
+            $table->foreignId('leave_type_id')->constrained('leave_types')->onDelete('cascade');
+            $table->integer('days_per_year');
+            $table->boolean('can_carry_over')->default(false);
             $table->integer('max_carry_over_days')->default(0);
-            $table->integer('max_days_per_year');
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
 
             $table->unique(['user_level_id', 'leave_type_id']); // prevent duplicates

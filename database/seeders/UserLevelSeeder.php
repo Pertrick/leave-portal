@@ -12,19 +12,20 @@ class UserLevelSeeder extends Seeder
         $userLevels = [
             [
                 'name' => 'Manager',
-                'level' => 2,
-                'max_leave_days' => 25
+                'level' => 1
             ],
             [
                 'name' => 'Supervisor',
-                'level' => 3,
-                'max_leave_days' => 20
+                'level' => 2
             ],
             [
                 'name' => 'Junior',
-                'level' => 4,
-                'max_leave_days' => 18
-            ]
+                'level' => 3,
+            ],
+            [
+                'name' => 'Intern/corpers',
+                'level' => 5,
+            ],
         ];
 
         foreach ($userLevels as $userLevel) {

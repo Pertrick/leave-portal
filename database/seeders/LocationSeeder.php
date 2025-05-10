@@ -10,22 +10,9 @@ class LocationSeeder extends Seeder
     public function run(): void
     {
         $locations = [
-            [
-                'name' => 'Head Office',
-                'type' => 'office'
-            ],
-            [
-                'name' => 'Branch Office 1',
-                'type' => 'office'
-            ],
-            [
-                'name' => 'Branch Office 2',
-                'type' => 'office'
-            ],
-            [
-                'name' => 'Remote',
-                'type' => 'remote'
-            ]
+            ['name' => 'Head Office','type' => 'Head Office'],
+            ['name' => 'Agbara', 'type' => 'Depot'],
+            ['name' => 'Remote', 'type' => 'Remote'],
         ];
 
         foreach ($locations as $location) {

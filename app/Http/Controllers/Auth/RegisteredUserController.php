@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Models\AccountRequest;
 use App\Models\Department;
 use App\Models\User;
 use App\Models\UserLevel;
@@ -55,6 +56,9 @@ class RegisteredUserController extends Controller
                 'join_date' => $validated['join_date'],
                 'password' => Hash::make($validated['password']),
             ]);
+
+            //update AccountRequest Service
+            AccountRequest::processed();
 
             event(new Registered($user));
 

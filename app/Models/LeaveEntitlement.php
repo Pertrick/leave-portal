@@ -15,14 +15,14 @@ class LeaveEntitlement extends Model
         'days_per_year',
         'can_carry_over',
         'max_carry_over_days',
-        'is_active'
+        'is_active',
     ];
 
     protected $casts = [
-        'days_per_year' => 'integer',
         'can_carry_over' => 'boolean',
+        'is_active' => 'boolean',
+        'days_per_year' => 'integer',
         'max_carry_over_days' => 'integer',
-        'is_active' => 'boolean'
     ];
 
     public function userLevel(): BelongsTo

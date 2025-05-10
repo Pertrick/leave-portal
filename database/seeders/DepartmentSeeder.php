@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Department;
 use App\Models\Location;
-use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class DepartmentSeeder extends Seeder
@@ -27,13 +26,25 @@ class DepartmentSeeder extends Seeder
                 'location_id' => $headOffice->id
             ],
             [
+                'name' => 'Marketing',
+                'location_id' => $headOffice->id
+            ],
+            [
                 'name' => 'Operations',
                 'location_id' => $headOffice->id
             ],
             [
-                'name' => 'Marketing',
+                'name' => 'Sales',
                 'location_id' => $headOffice->id
-            ]
+            ],
+            [
+                'name' => 'Customer Service',
+                'location_id' => $headOffice->id
+            ],
+            [
+                'name' => 'Research and Development',
+                'location_id' => $headOffice->id
+            ],
         ];
 
         foreach ($departments as $department) {

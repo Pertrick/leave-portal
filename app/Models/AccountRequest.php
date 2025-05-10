@@ -26,4 +26,8 @@ class AccountRequest extends Model
     {
         return $this->belongsTo(User::class, 'processed_by');
     }
+
+    public static function proceessed($staffId){
+        $this->
+    }
 } 

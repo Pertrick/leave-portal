@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
     message?: string;
 }>();
 </script>
@@ -11,3 +11,9 @@ defineProps<{
         </p>
     </div>
 </template>
+
+<script lang="ts">
+export default {
+    name: 'InputError'
+};
+</script>

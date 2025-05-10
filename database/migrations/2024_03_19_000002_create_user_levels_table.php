@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->string('name'); // e.g., Junior, Supervisor, Manager
             $table->integer('level'); // e.g., 1, 2, 3
-            $table->integer('max_leave_days'); // entitlement
             $table->timestamps();
         });
     }

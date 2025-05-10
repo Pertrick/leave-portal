@@ -16,67 +16,57 @@ class LeaveEntitlementSeeder extends Seeder
 
         foreach ($userLevels as $userLevel) {
             foreach ($leaveTypes as $leaveType) {
-                $entitlement = [
+                $configKey = $this->getConfigKey($leaveType->name);
+                $config = config("leave.defaults.{$configKey}");
+
+                if (!$config) {
+                    continue;
+                }
+
+                $daysPerYear = $this->getDaysPerYear($config, $userLevel->level);
+                $canCarryOver = $config['can_carry_over'] ?? false;
+                $maxCarryOverDays = $this->getMaxCarryOverDays($config, $userLevel->level, $canCarryOver);
+
+                LeaveEntitlement::create([
                     'user_level_id' => $userLevel->id,
                     'leave_type_id' => $leaveType->id,
-                    'days_per_year' => $this->getDefaultDays($userLevel->level, $leaveType->name),
-                    'can_carry_over' => $this->canCarryOver($leaveType->name),
-                    'max_carry_over_days' => $this->getMaxCarryOverDays($userLevel->level, $leaveType->name),
-                    'is_active' => true
-                ];
-
-                LeaveEntitlement::create($entitlement);
+                    'days_per_year' => $daysPerYear,
+                    'can_carry_over' => $canCarryOver,
+                    'max_carry_over_days' => $maxCarryOverDays,
+                    'is_active' => true,
+                ]);
             }
         }
     }
 
-    private function getDefaultDays(int $userLevel, string $leaveType): int
+    private function getDaysPerYear(array $config, int $userLevel): int
     {
-        return match ($leaveType) {
-            'Annual Leave' => match ($userLevel) {
-                1, 2 => 30, // Admin, Manager
-                3 => 25,    // Supervisor
-                4 => 20,    // Junior
-                default => 15
-            },
-            'Sick Leave' => 14,
-            'Maternity Leave' => 90,
-            'Paternity Leave' => 14,
-            'Compassionate Leave' => 5,
-            'Casual/Personal Leave' => 7,
-            'Field Work' => 0, // Not counted as leave
-            default => 0
-        };
-    }
-
-    private function canCarryOver(string $leaveType): bool
-    {
-        return match ($leaveType) {
-            'Annual Leave' => true,
-            'Sick Leave' => false,
-            'Maternity Leave' => false,
-            'Paternity Leave' => false,
-            'Compassionate Leave' => false,
-            'Casual/Personal Leave' => false,
-            'Field Work' => false,
-            default => false
-        };
-    }
-
-    private function getMaxCarryOverDays(int $userLevel, string $leaveType): int
-    {
-        if (!$this->canCarryOver($leaveType)) {
+        if (!isset($config['days_per_year'])) {
             return 0;
         }
 
-        return match ($leaveType) {
-            'Annual Leave' => match ($userLevel) {
-                1, 2 => 15, // Admin, Manager
-                3 => 10,    // Supervisor
-                4 => 5,     // Junior
-                default => 0
-            },
-            default => 0
-        };
+        if (is_array($config['days_per_year'])) {
+            return $config['days_per_year'][$userLevel] ?? $config['days_per_year']['default'] ?? 0;
+        }
+
+        return $config['days_per_year'];
+    }
+
+    private function getMaxCarryOverDays(array $config, int $userLevel, bool $canCarryOver): int
+    {
+        if (!$canCarryOver || !isset($config['max_carry_over_days'])) {
+            return 0;
+        }
+
+        if (is_array($config['max_carry_over_days'])) {
+            return $config['max_carry_over_days'][$userLevel] ?? $config['max_carry_over_days']['default'] ?? 0;
+        }
+
+        return $config['max_carry_over_days'];
+    }
+
+    private function getConfigKey(string $leaveType): string
+    {
+        return strtolower(str_replace([' ', '/'], '_', $leaveType));
     }
 } 

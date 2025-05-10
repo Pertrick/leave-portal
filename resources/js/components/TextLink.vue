@@ -23,3 +23,9 @@ defineProps<Props>();
         <slot />
     </Link>
 </template>
+
+<script lang="ts">
+export default {
+    name: 'TextLink'
+};
+</script>
