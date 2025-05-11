@@ -40,6 +40,7 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             NavigationSeeder::class,
             LeaveBalanceSeeder::class,
+            ApproverSeeder::class,
         ]);
     }
 }

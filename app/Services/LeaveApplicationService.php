@@ -379,6 +379,7 @@ class LeaveApplicationService
         return User::whereHas('roles', function ($query) use ($level) {
             $query->where('name', $level->role_name);
         })
+        ->where('department_id', Auth::user()->department_id)
         ->where('is_active', true)
         ->get();
     }
