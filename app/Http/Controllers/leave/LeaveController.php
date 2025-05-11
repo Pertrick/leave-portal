@@ -3,17 +3,18 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Leave;
 
+use Carbon\Carbon;
+use App\Models\User;
 use Inertia\Inertia;
 use App\Models\Leave;
-use App\Models\User;
 use Inertia\Response;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\RedirectResponse;
 use App\Services\LeaveApplicationService;
-use App\Http\Requests\Leave\StoreLeaveRequest;
 use App\Http\Requests\Leave\SaveDraftRequest;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\Leave\StoreLeaveRequest;
 
 class LeaveController extends Controller
 {
@@ -83,12 +84,15 @@ class LeaveController extends Controller
 
     public function edit(Leave $leave): Response|RedirectResponse
     {
-        if (!$leave->isPending()) {
+        if (!$leave->isPending() && !$leave->isDraft()) {
             return redirect()->route('leaves.index')
                 ->with('error', 'Only pending leave applications can be edited.');
         }
 
         $leaveTypes = $this->leaveService->getLeaveTypes();
+        
+        $leave->start_date = Carbon::parse($leave->start_date)->format('m/d/Y');
+        $leave->end_date = Carbon::parse($leave->end_date)->format('m/d/Y');
 
         return Inertia::render('leave/Edit', [
             'leave' => $leave,

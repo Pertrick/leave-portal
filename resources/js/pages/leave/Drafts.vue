@@ -2,23 +2,24 @@
   <AppLayout title="Draft Leave Applications">
     <template #header>
       <div class="flex justify-between items-center">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-          Draft Leave Applications
-        </h2>
-        <div class="flex space-x-4">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900">Draft Applications</h2>
+          <p class="mt-1 text-sm text-gray-500">Manage your pending leave applications</p>
+        </div>
+        <div class="flex space-x-3">
+          <Link
+            :href="route('leaves.index')"
+            class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg font-medium text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-sm"
+          >
+            <DocumentTextIcon class="w-4 h-4 mr-2 text-gray-500" />
+            View All
+          </Link>
           <Link
             :href="route('leaves.create')"
-            class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150"
+            class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-sm"
           >
             <PlusIcon class="w-4 h-4 mr-2" />
             New Application
-          </Link>
-          <Link
-            :href="route('leaves.index')"
-            class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150"
-          >
-            <DocumentTextIcon class="w-4 h-4 mr-2" />
-            View All Applications
           </Link>
         </div>
       </div>
@@ -28,17 +29,19 @@
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <!-- Empty State -->
         <div v-if="drafts.length === 0" class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-          <div class="p-6 text-center">
-            <DocumentIcon class="mx-auto h-12 w-12 text-gray-400" />
-            <h3 class="mt-2 text-sm font-medium text-gray-900">No draft applications</h3>
-            <p class="mt-1 text-sm text-gray-500">Get started by creating a new leave application.</p>
-            <div class="mt-6">
+          <div class="p-12 text-center">
+            <div class="mx-auto w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center">
+              <DocumentIcon class="h-10 w-10 text-indigo-500" />
+            </div>
+            <h3 class="mt-4 text-lg font-semibold text-gray-900">No draft applications</h3>
+            <p class="mt-2 text-sm text-gray-500">Get started by creating a new leave application</p>
+            <div class="mt-8">
               <Link
                 :href="route('leaves.create')"
-                class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150"
+                class="inline-flex items-center px-5 py-2.5 bg-indigo-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-sm"
               >
-                <PlusIcon class="w-4 h-4 mr-2" />
-                New Application
+                <PlusIcon class="w-5 h-5 mr-2" />
+                Create New Application
               </Link>
             </div>
           </div>
@@ -49,60 +52,88 @@
           <div
             v-for="draft in drafts"
             :key="draft.id"
-            class="bg-white overflow-hidden shadow-sm sm:rounded-lg hover:shadow-md transition-shadow duration-200"
+            class="group bg-white overflow-hidden shadow-sm sm:rounded-lg hover:shadow-lg transition-all duration-300"
           >
-            <div class="p-6">
-              <!-- Header -->
+            <!-- Card Header -->
+            <div class="p-6 border-b border-gray-100">
               <div class="flex justify-between items-start">
                 <div>
-                  <h3 class="text-lg font-medium text-gray-900">
+                  <h3 class="text-lg font-semibold text-gray-900">
                     {{ getLeaveTypeName(draft.leave_type_id) }}
                   </h3>
                   <p class="mt-1 text-sm text-gray-500">
                     Created {{ formatDate(draft.created_at) }}
                   </p>
                 </div>
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-200">
                   Draft
                 </span>
               </div>
+            </div>
 
-              <!-- Content -->
-              <div class="mt-4 space-y-3">
-                <div class="flex items-center text-sm text-gray-500">
-                  <CalendarIcon class="w-4 h-4 mr-2" />
-                  <span>{{ formatDate(draft.start_date) }} - {{ formatDate(draft.end_date) }}</span>
+            <!-- Card Content -->
+            <div class="p-6 space-y-4">
+              <!-- Leave Type -->
+              <div class="flex items-center">
+                <span class="px-3 py-1.5 text-sm font-medium rounded-full shadow-sm" 
+                      :class="{
+                        'bg-blue-50 text-blue-700 border border-blue-200': draft.leave_type.name === 'Annual Leave',
+                        'bg-green-50 text-green-700 border border-green-200': draft.leave_type.name === 'Sick Leave',
+                        'bg-purple-50 text-purple-700 border border-purple-200': draft.leave_type.name === 'Maternity Leave',
+                        'bg-yellow-50 text-yellow-700 border border-yellow-200': draft.leave_type.name === 'Paternity Leave',
+                        'bg-gray-50 text-gray-700 border border-gray-200': true
+                      }">
+                  {{ draft.leave_type.name }}
+                </span>
+              </div>
+
+              <!-- Date and Duration -->
+              <div class="grid grid-cols-2 gap-4">
+                <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <div class="flex items-center text-sm text-gray-600 mb-1">
+                    <CalendarIcon class="w-4 h-4 mr-2 text-gray-500" />
+                    <span class="font-medium">Duration</span>
+                  </div>
+                  <div class="pl-6 text-sm text-gray-700">
+                    {{ formatDate(draft.start_date) }} - {{ formatDate(draft.end_date) }}
+                  </div>
                 </div>
-                <div class="flex items-center text-sm text-gray-500">
-                  <ClockIcon class="w-4 h-4 mr-2" />
-                  <span>{{ calculateDuration(draft.start_date, draft.end_date) }} days</span>
+                
+                <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <div class="flex items-center text-sm text-gray-600 mb-1">
+                    <ClockIcon class="w-4 h-4 mr-2 text-gray-500" />
+                    <span class="font-medium">Days</span>
+                  </div>
+                  <div class="pl-6 text-sm text-gray-700">
+                    <span class="font-medium">{{ draft.working_days }}</span> working days
+                    <span class="text-gray-500">({{ draft.calendar_days }} calendar days)</span>
+                  </div>
                 </div>
-                <p class="text-sm text-gray-600 line-clamp-2">
+              </div>
+
+              <!-- Reason -->
+              <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <div class="flex items-center text-sm text-gray-600 mb-1">
+                  <DocumentTextIcon class="w-4 h-4 mr-2 text-gray-500" />
+                  <span class="font-medium">Reason</span>
+                </div>
+                <p class="pl-6 text-sm text-gray-700 line-clamp-2">
                   {{ draft.reason }}
                 </p>
               </div>
 
-              <!-- Actions -->
-              <div class="mt-6 flex justify-end space-x-3">
+              <!-- Action Buttons -->
+              <div class="flex justify-end space-x-3 pt-2">
                 <Link
-                  :href="route('leaves.edit', draft.id)"
-                  class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  :href="route('leaves.edit', draft.uuid)"
+                  class="inline-flex items-center px-3.5 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors border border-gray-300"
                 >
-                  <PencilIcon class="w-4 h-4 mr-1" />
+                  <PencilIcon class="w-4 h-4 mr-1.5" />
                   Edit
                 </Link>
-                <button
-                  @click="submitDraft(draft)"
-                  class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  <PaperAirplaneIcon class="w-4 h-4 mr-1" />
-                  Submit
-                </button>
-                <button
-                  @click="deleteDraft(draft)"
-                  class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                >
-                  <TrashIcon class="w-4 h-4 mr-1" />
+                <button @click="deleteDraft(draft)" 
+                        class="inline-flex items-center px-3.5 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors border border-red-200">
+                  <TrashIcon class="w-4 h-4 mr-1.5" />
                   Delete
                 </button>
               </div>
@@ -124,7 +155,6 @@ import {
   CalendarIcon,
   ClockIcon,
   PencilIcon,
-  PaperAirplaneIcon,
   TrashIcon,
 } from '@heroicons/vue/24/outline'
 
@@ -143,20 +173,6 @@ const formatDate = (date) => {
   return new Date(date).toLocaleDateString('en-US', options)
 }
 
-const calculateDuration = (startDate, endDate) => {
-  const start = new Date(startDate)
-  const end = new Date(endDate)
-  const diffTime = Math.abs(end - start)
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return diffDays + 1 // Include both start and end dates
-}
-
-const submitDraft = (draft) => {
-  if (confirm('Are you sure you want to submit this draft?')) {
-    // Implement draft submission logic
-  }
-}
-
 const deleteDraft = (draft) => {
   if (confirm('Are you sure you want to delete this draft?')) {
     // Implement draft deletion logic
@@ -170,5 +186,26 @@ const deleteDraft = (draft) => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Smooth transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+/* Card hover effects */
+.group:hover {
+  transform: translateY(-2px);
+}
+
+/* Button hover effects */
+button {
+  transition: all 0.2s ease-in-out;
+}
+
+button:hover {
+  transform: translateY(-1px);
 }
 </style> 

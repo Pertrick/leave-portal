@@ -50,4 +50,5 @@ return [
             'max_carry_over_days' => 0,
         ],
     ],
+    'max_draft_leave_per_user' => env('MAX_DRAFT_LEAVE_PER_USER', 3),
 ]; 

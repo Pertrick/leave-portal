@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Leave extends Model
 {
+    protected $keyType = 'string';
     protected $fillable = [
         'uuid',
         'user_id',
@@ -68,6 +69,12 @@ class Leave extends Model
         return $this->status === 'pending';
     }
 
+    public function isDraft(): bool
+    {
+        return $this->status === 'draft';
+    }
+
+
 
     protected static function boot(): void
     {
@@ -77,4 +84,9 @@ class Leave extends Model
             $leave->uuid = (string) Uuid::uuid4();
         });
     }
+
+    public function getRouteKeyName()
+{
+    return 'uuid';
+}
 } 
