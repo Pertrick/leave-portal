@@ -20,7 +20,7 @@ return new class extends Migration
             $table->date('end_date');
             $table->integer('calendar_days'); // Total calendar days including holidays
             $table->integer('working_days'); // Actual working days excluding holidays
-            $table->text('reason');
+            $table->text('reason')->nullable();
             $table->text('applicant_comment')->nullable(); // optional notes by applicant
             $table->string('replacement_staff_name')->nullable(); // e.g., "James Smith"
             $table->string('replacement_staff_phone')->nullable(); // e.g., "08012345678"

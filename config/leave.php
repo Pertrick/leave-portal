@@ -6,16 +6,16 @@ return [
             'days_per_year' => [
                 1 => 30, // Admin
                 2 => 30, // Manager
-                3 => 25, // Supervisor
-                4 => 20, // Junior
+                3 => 20, // Supervisor
+                4 => 25, // Junior
                 'default' => 15,
             ],
             'can_carry_over' => true,
             'max_carry_over_days' => [
                 1 => 15, // Admin
                 2 => 15, // Manager
-                3 => 10, // Supervisor
-                4 => 5,  // Junior
+                3 => 5, // Supervisor
+                4 => 10,  // Junior
                 'default' => 0,
             ],
         ],

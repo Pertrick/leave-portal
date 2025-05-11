@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Leave;
 
 use App\Http\Controllers\Controller;
 use App\Models\LeaveType;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,7 +26,7 @@ class LeaveTypeController extends Controller
         return Inertia::render('Leave/Types/Create');
     }
 
-    public function store(Request $request)
+    public function store(Request $request):RedirectResponse
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:leave_types',
@@ -60,7 +61,7 @@ class LeaveTypeController extends Controller
             ->with('success', 'Leave type updated successfully.');
     }
 
-    public function destroy(LeaveType $leaveType)
+    public function destroy(LeaveType $leaveType): RedirectResponse
     {
         if ($leaveType->leaves()->exists()) {
             return redirect()->route('leave.types.index')

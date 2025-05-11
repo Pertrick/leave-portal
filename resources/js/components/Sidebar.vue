@@ -45,7 +45,9 @@ const isDropdownOpen = (id: number) => {
 };
 
 const currentPath = computed(() => {
-    return usePage().url;
+    const path = usePage().url;
+    console.log('Current path:', path);
+    return path;
 });
 
 const iconMap = {
@@ -73,7 +75,20 @@ const getFullPath = (item: NavigationItem): string => {
     if (item.path.startsWith('/')) {
         return item.path;
     }
-    return `/${item.path}`;
+    const fullPath = `/${item.path}`;
+    console.log('Full path for item:', item.title, fullPath);
+    return fullPath;
+};
+
+const isActive = (item: NavigationItem): boolean => {
+    const fullPath = getFullPath(item);
+    const isActive = currentPath.value === fullPath || currentPath.value.startsWith(fullPath);
+    console.log('Checking active state for:', item.title, {
+        fullPath,
+        currentPath: currentPath.value,
+        isActive
+    });
+    return isActive;
 };
 
 const getChildItems = (parentId: number) => {
@@ -149,7 +164,7 @@ defineExpose({});
                             :key="child.id"
                             :href="getFullPath(child)"
                             class="flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-                            :class="[currentPath.startsWith(getFullPath(child)) ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground']"
+                            :class="[isActive(child) ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground']"
                         >
                             <component
                                 v-if="getIcon(child.icon)"
@@ -166,7 +181,7 @@ defineExpose({});
                     v-else
                     :href="getFullPath(item)"
                     class="flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-                    :class="[currentPath.startsWith(getFullPath(item)) ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground']"
+                    :class="[isActive(item) ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground']"
                 >
                     <component
                         v-if="getIcon(item.icon)"

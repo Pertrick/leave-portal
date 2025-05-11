@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Ramsey\Uuid\Uuid;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Leave extends Model
 {
@@ -65,5 +66,15 @@ class Leave extends Model
     public function isPending(): bool
     {
         return $this->status === 'pending';
+    }
+
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function ($leave) {
+            $leave->uuid = (string) Uuid::uuid4();
+        });
     }
 } 

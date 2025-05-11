@@ -14,12 +14,18 @@ return new class extends Migration
         Schema::create('holidays', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->date('date');
-            $table->enum('type', ['public', 'company', 'location'])->default('public');
-            $table->foreignId('location_id')->nullable()->constrained()->onDelete('cascade');
+            $table->date('date')->nullable(); // Nullable for recurring holidays
+            $table->string('type'); // public, company, location
+            $table->foreignId('location_id')->nullable()->constrained()->nullOnDelete();
             $table->text('description')->nullable();
-            $table->boolean('is_recurring')->default(false); // For holidays that occur every year
+            $table->boolean('is_recurring')->default(false);
             $table->boolean('is_active')->default(true);
+            // New fields for recurring holidays
+            $table->string('recurrence_type')->nullable(); // 'fixed', 'easter', 'lunar', 'custom'
+            $table->integer('recurrence_day')->nullable(); // Day of month for fixed
+            $table->integer('recurrence_month')->nullable(); // Month for fixed
+            $table->integer('easter_offset')->nullable(); // Days before/after Easter
+            $table->string('custom_rule')->nullable(); // JSON string for custom rules
             $table->timestamps();
 
             // Ensure no duplicate holidays for the same date and location

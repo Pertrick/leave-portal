@@ -8,6 +8,7 @@ use App\Models\User;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\UserLevel;
+use App\Events\NewAccount;
 use App\Models\Department;
 use Illuminate\Http\Request;
 use App\Models\AccountRequest;
@@ -65,7 +66,7 @@ class RegisteredUserController extends Controller
             $employeeRole = Role::firstOrCreate(['name' => 'Employee']);
             $user->assignRole($employeeRole);
 
-            event(new Registered($user, $validated['password']));
+            event(new NewAccount($user, $validated['password']));
 
             AccountRequest::processed($validated['staff_id'], auth()->id());
             

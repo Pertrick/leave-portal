@@ -8,6 +8,7 @@ import { SearchSelect } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
 import { ToastService } from '@/services/toast';
 import { computed, watch } from 'vue';
+import AppLayout from '@/layouts/AppLayout.vue';
 
 const props = defineProps<{
     departments: Array<{ id: number; name: string }>;
@@ -175,13 +176,19 @@ const validateForm = () => {
     return errors;
 };
 
+type FormFields = 'staff_id' | 'username' | 'firstname' | 'lastname' | 'email' | 'phone' | 
+    'address' | 'designation' | 'gender' | 'dob' | 'join_date' | 'password' | 
+    'password_confirmation' | 'user_level_id' | 'department_id';
+
 const submit = () => {
     const errors = validateForm();
     
     if (Object.keys(errors).length > 0) {
         // Set form errors
         Object.entries(errors).forEach(([field, message]) => {
-            form.setError(field as keyof typeof form, message);
+            if (field in form) {
+                form.setError(field as FormFields, message);
+            }
         });
         ToastService.error('Please correct the errors in the form.');
         return;
@@ -189,8 +196,8 @@ const submit = () => {
 
     form.post(route('register'), {
         onSuccess: () => {
-            ToastService.success('Registration successful! Welcome to the portal.');
-            form.reset('password', 'password_confirmation');
+            ToastService.success('Staff Account Created Successfully!');
+            form.reset();
         },
         onError: (errors) => {
             ToastService.error('Registration failed. Please check the form for errors.');
@@ -200,15 +207,17 @@ const submit = () => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
-        <Head title="Register New User" />
+    <AppLayout title="Register New User">
+        <template #header>
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+                Register New Account
+            </h2>
+        </template>
 
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6">
-                        <h2 class="text-2xl font-semibold mb-6">Register New User</h2>
-                        
                         <form @submit.prevent="submit" class="flex flex-col gap-6">
                             <div class="grid gap-6">
                                 <!-- Row 1: Staff ID, Username, First Name, Last Name -->
@@ -406,5 +415,5 @@ const submit = () => {
                 </div>
             </div>
         </div>
-    </div>
+    </AppLayout>
 </template>

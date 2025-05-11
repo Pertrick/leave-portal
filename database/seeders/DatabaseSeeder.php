@@ -39,6 +39,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             AdminUserSeeder::class,
             NavigationSeeder::class,
+            LeaveBalanceSeeder::class,
         ]);
     }
 }

@@ -41,12 +41,32 @@ class NavigationSeeder extends Seeder
         ]);
 
         Navigation::create([
+            'path' => 'leaves/create',
+            'title' => 'New Application',
+            'parent_id' => $leave->id,
+            'roles' => ['Admin', 'Supervisor', 'HOD', 'HR', 'Employee'],
+            'icon' => 'plus-circle',
+            'order' => 2,
+            'is_dropdown' => false
+        ]);
+
+        Navigation::create([
+            'path' => 'leaves/drafts',
+            'title' => 'Drafts',
+            'parent_id' => $leave->id,
+            'roles' => ['Admin', 'Supervisor', 'HOD', 'HR', 'Employee'],
+            'icon' => 'document-duplicate',
+            'order' => 3,
+            'is_dropdown' => false
+        ]);
+
+        Navigation::create([
             'path' => 'leave/approvals',
             'title' => 'Leave Approvals',
             'parent_id' => $leave->id,
             'roles' => ['Admin', 'Supervisor', 'HOD', 'HR'],
             'icon' => 'check-circle',
-            'order' => 2,
+            'order' => 4,
             'is_dropdown' => false
         ]);
 
@@ -56,8 +76,8 @@ class NavigationSeeder extends Seeder
             'parent_id' => $leave->id,
             'roles' => ['Admin', 'HR'],
             'icon' => 'tag',
-            'order' => 3,
-            'is_dropdown' =>false
+            'order' => 5,
+            'is_dropdown' => false
         ]);
 
         Navigation::create([
@@ -66,7 +86,7 @@ class NavigationSeeder extends Seeder
             'parent_id' => $leave->id,
             'roles' => ['Admin', 'HR'],
             'icon' => 'calculator',
-            'order' => 4,
+            'order' => 6,
             'is_dropdown' => false
         ]);
 
@@ -76,7 +96,6 @@ class NavigationSeeder extends Seeder
             'title' => 'Staff Management',
             'roles' => ['Admin', 'Supervisor', 'HOD', 'HR', 'Employee'],
             'icon' => 'users',
-            'order' => 3,
             'is_dropdown' => false
         ]);
 
@@ -87,7 +106,7 @@ class NavigationSeeder extends Seeder
             'parent_id' => $staff->id,
             'roles' => ['Admin', 'HR'],
             'icon' => 'list',
-            'order' => 1,
+            
             'is_dropdown' => false
         ]);
 
@@ -160,6 +179,37 @@ class NavigationSeeder extends Seeder
             'icon' => 'user',
             'order' => 7,
             'is_dropdown' => false
+        ]);
+
+        // New additions
+        Navigation::create([
+            'path' => 'leave-entitlements',
+            'title' => 'Leave Entitlements',
+            'roles' => ['Admin'],
+            'icon' => 'calendar',
+            'parent_id' => $leave->id,
+            'order' => 7,
+            'is_dropdown' => false,
+        ]);
+
+        Navigation::create([
+            'path' => 'admin/holidays',
+            'title' => 'Holiday Management',
+            'roles' => ['Admin'],
+            'icon' => 'calendar-days',
+            'parent_id' => $leave->id,
+            'order' => 8,
+            'is_dropdown' => false,
+        ]);
+
+        Navigation::create([
+            'path' => 'leave-applications',
+            'title' => 'Leave Applications',
+            'roles' => ['Admin'],
+            'icon' => 'clipboard-document-list',
+            'parent_id' => $leave->id,
+            'order' => 9,
+            'is_dropdown' => false,
         ]);
     }
 } 

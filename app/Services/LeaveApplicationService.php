@@ -2,33 +2,145 @@
 
 namespace App\Services;
 
-use App\Models\Leave;
-use App\Models\User;
-use App\Models\LeaveType;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
+use App\Models\User;
+use App\Models\Leave;
+use App\Models\Holiday;
+use App\Models\Location;
+use App\Models\LeaveType;
 use Illuminate\Support\Str;
+use App\Models\ApprovalLevel;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class LeaveApplicationService
 {
     public function create(array $data, User $user): Leave
     {
-        $data['user_id'] = $user->id;
-        $data['uuid'] = (string) Str::uuid();
-        $data['calendar_days'] = $this->calculateCalendarDays($data['start_date'], $data['end_date']);
-        $data['working_days'] = $this->calculateWorkingDays($data['start_date'], $data['end_date']);
-        $data['status'] = 'pending';
-        
-        return Leave::create($data);
+        $startDate = Carbon::parse($data['start_date']);
+        $endDate = Carbon::parse($data['end_date']);
+        $leaveType = LeaveType::findOrFail($data['leave_type_id']);
+
+        // Validate dates
+        $this->validateLeaveDates($startDate, $endDate, $user->location_id);
+
+        // Calculate calendar days (including holidays)
+        $calendarDays = $startDate->diffInDays($endDate) + 1;
+
+        // Calculate working days (excluding weekends and holidays)
+        $workingDays = $this->calculateWorkingDays($startDate, $endDate, $user->location_id);
+
+        // Get holidays in the date range
+        $holidays = $this->getHolidaysBetween($startDate, $endDate, $user->location_id);
+
+        try {
+            DB::beginTransaction();
+            
+            // Create the leave record
+            $leave = $user->leaves()->create([
+                'user_id' => $user->id,
+                'leave_type_id' => $data['leave_type_id'],
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'reason' => $data['reason'],
+                'calendar_days' => $calendarDays,
+                'working_days' => $workingDays,
+                'status' => 'pending',
+                'location_id' => $user->location_id,
+                'holidays' => $holidays->pluck('name')->toArray()
+            ]);
+
+            // Get all active approval levels ordered by level
+            $approvalLevels = ApprovalLevel::where('is_active', true)
+                ->orderBy('level')
+                ->get();
+
+            if ($approvalLevels->isEmpty()) {
+                throw new \InvalidArgumentException('No approval levels found.');
+            }
+
+            // Create leave approval records for each level
+            foreach ($approvalLevels as $level) {
+                // Get approvers for this level
+                $approvers = $this->getApprovers($level);
+                
+                if ($approvers->isEmpty()) {
+                    throw new \InvalidArgumentException("No approvers found for level {$level->name}");
+                }
+
+                // Create approval record for each approver at this level
+                foreach ($approvers as $approver) {
+                    $leave->approvals()->create([
+                        'user_id' => $approver->id,
+                        'status' => 'pending',
+                        'order' => $level->level,
+                        'level_id' => $level->id
+                    ]);
+                }
+            }
+
+            // Set the current approval level to the first level
+            $firstLevel = $approvalLevels->first();
+            $leave->update([
+                'current_approval_level' => $firstLevel->name,
+                'current_approval_id' => $firstLevel->id
+            ]);
+
+            DB::commit();
+            return $leave;
+            
+        } catch(\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Validate leave dates
+     *
+     * @param Carbon $startDate
+     * @param Carbon $endDate
+     * @param int|null $locationId
+     * @throws \InvalidArgumentException
+     */
+    private function validateLeaveDates(Carbon $startDate, Carbon $endDate, ?int $locationId = null): void
+    {
+        if ($startDate->isWeekend()) {
+            throw new \InvalidArgumentException('Leave cannot start on a weekend.');
+        }
+
+        if ($endDate->isWeekend()) {
+            throw new \InvalidArgumentException('Leave cannot end on a weekend.');
+        }
+
+        if ($this->isHoliday($startDate, $locationId)) {
+            throw new \InvalidArgumentException('Leave cannot start on a holiday.');
+        }
+
+        if ($this->isHoliday($endDate, $locationId)) {
+            throw new \InvalidArgumentException('Leave cannot end on a holiday.');
+        }
+
+        if ($startDate->gt($endDate)) {
+            throw new \InvalidArgumentException('Start date cannot be after end date.');
+        }
+
+        if ($startDate->lt(now()->startOfDay())) {
+            throw new \InvalidArgumentException('Start date cannot be in the past.');
+        }
+    }
+
+    public function createDraft(array $data, User $user): Leave
+    {
+        $data = $this->calculateDays($data);
+        return Auth::user()->leaves()->create($data);
     }
 
     public function update(Leave $leave, array $data): Leave
     {
-        if (isset($data['start_date']) && isset($data['end_date'])) {
-            $data['calendar_days'] = $this->calculateCalendarDays($data['start_date'], $data['end_date']);
-            $data['working_days'] = $this->calculateWorkingDays($data['start_date'], $data['end_date']);
-        }
-
+        $data = $this->calculateDays($data);
+        
         $leave->update($data);
         return $leave;
     }
@@ -74,6 +186,16 @@ class LeaveApplicationService
     {
         return $user->leaves()
             ->with(['leaveType', 'approvals.user'])
+            ->where('status', '!=', 'draft')
+            ->latest()
+            ->get();
+    }
+
+    public function getUserDrafts(User $user): Collection
+    {
+        return $user->leaves()
+            ->with(['leaveType'])
+            ->where('status', 'draft')
             ->latest()
             ->get();
     }
@@ -91,30 +213,173 @@ class LeaveApplicationService
         return LeaveType::where('is_active', true)->get();
     }
 
-    protected function calculateCalendarDays(string $startDate, string $endDate): int
+    public function getLeaveBalances(User $user): Collection
     {
+        return $user->leaveBalances()
+            ->with('leaveType')
+            ->where('year', now()->year)
+            ->get();
+    }
+
+    private function calculateDays(array $data): array
+    {
+        if (isset($data['start_date']) && isset($data['end_date'])) {
+            $data['calendar_days'] = $this->calculateCalendarDays($data['start_date'], $data['end_date']);
+            $data['working_days'] = $this->calculateWorkingDays($data['start_date'], $data['end_date']);
+        } else {
+            $data['calendar_days'] = 0;
+            $data['working_days'] = 0;
+        }
+        
+        return $data;
+    }
+
+    protected function calculateCalendarDays(?string $startDate, ?string $endDate): int
+    {
+        if (!$startDate || !$endDate) {
+            return 0;
+        }
+        
         $start = Carbon::parse($startDate);
         $end = Carbon::parse($endDate);
         
         return $start->diffInDays($end) + 1; // Include both start and end dates
     }
 
-    protected function calculateWorkingDays(string $startDate, string $endDate): int
+    private function calculateWorkingDays(Carbon $startDate, Carbon $endDate, ?int $locationId = null): int
     {
-        $start = Carbon::parse($startDate);
-        $end = Carbon::parse($endDate);
-        
         $days = 0;
-        $current = $start->copy();
-        
-        while ($current->lte($end)) {
-            // Skip weekends (Saturday = 6, Sunday = 0)
-            if ($current->dayOfWeek !== 0 && $current->dayOfWeek !== 6) {
-                $days++;
+        $currentDate = $startDate->copy();
+
+        while ($currentDate->lte($endDate)) {
+            // Skip weekends
+            if ($currentDate->isWeekend()) {
+                $currentDate->addDay();
+                continue;
             }
-            $current->addDay();
+
+            // Skip holidays
+            if ($this->isHoliday($currentDate, $locationId)) {
+                $currentDate->addDay();
+                continue;
+            }
+
+            $days++;
+            $currentDate->addDay();
         }
-        
+
         return $days;
+    }
+
+    /**
+     * Check if a given date is a holiday
+     *
+     * @param Carbon $date The date to check
+     * @param int|null $locationId The location ID to check holidays for
+     * @return bool
+     */
+    private function isHoliday(Carbon $date, ?Location $location = null): bool
+    {
+        $query = Holiday::where('is_active', true)
+            ->where(function ($query) use ($date, $location) {
+                // Check fixed date holidays
+                $query->where(function ($q) use ($date) {
+                    $q->where('date', $date->format('Y-m-d'))
+                        ->orWhere(function ($q) use ($date) {
+                            $q->where('is_recurring', true)
+                                ->where('recurrence_type', 'fixed')
+                                ->where('recurrence_day', $date->day)
+                                ->where('recurrence_month', $date->month);
+                        });
+                });
+
+                // Check Easter-based holidays
+                $query->orWhere(function ($q) use ($date) {
+                    $q->where('is_recurring', true)
+                        ->where('recurrence_type', 'easter')
+                        ->whereRaw('date(?, ? || " days") = ?', [
+                            $this->calculateEasterSunday($date->year),
+                            'easter_offset',
+                            $date->format('Y-m-d')
+                        ]);
+                });
+
+                // Check custom rule holidays
+                $query->orWhere(function ($q) use ($date) {
+                    $q->where('is_recurring', true)
+                        ->where('recurrence_type', 'custom')
+                        ->whereJsonContains('custom_rule->month', $date->month)
+                        ->whereJsonContains('custom_rule->type', 'fixed')
+                        ->whereJsonContains('custom_rule->day', $date->day);
+                });
+
+                // Add location filter if provided
+                if ($location) {
+                    $query->where(function ($q) use ($location) {
+                        $q->whereNull('location_id')
+                            ->orWhere('location_id', $location->id);
+                    });
+                }
+            });
+
+        return $query->exists();
+    }
+
+    private function calculateEasterSunday(int $year): Carbon
+    {
+        $a = $year % 19;
+        $b = floor($year / 100);
+        $c = $year % 100;
+        $d = floor($b / 4);
+        $e = $b % 4;
+        $f = floor(($b + 8) / 25);
+        $g = floor(($b - $f + 1) / 3);
+        $h = (19 * $a + $b - $d - $g + 15) % 30;
+        $i = floor($c / 4);
+        $k = $c % 4;
+        $l = (32 + 2 * $e + 2 * $i - $h - $k) % 7;
+        $m = floor(($a + 11 * $h + 22 * $l) / 451);
+        $month = floor(($h + $l - 7 * $m + 114) / 31);
+        $day = (($h + $l - 7 * $m + 114) % 31) + 1;
+
+        return Carbon::create($year, $month, $day);
+    }
+
+    /**
+     * Get all holidays between two dates
+     *
+     * @param Carbon $startDate
+     * @param Carbon $endDate
+     * @param int|null $locationId
+     * @return Collection
+     */
+    private function getHolidaysBetween(Carbon $startDate, Carbon $endDate, ?int $locationId = null): Collection
+    {
+        $query = Holiday::whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+            ->where('is_active', true);
+
+        if ($locationId) {
+            $query->where(function ($q) use ($locationId) {
+                $q->where('location_id', $locationId)
+                    ->orWhereNull('location_id');
+            });
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Get approvers for a specific approval level
+     *
+     * @param ApprovalLevel $level
+     * @return Collection
+     */
+    private function getApprovers(ApprovalLevel $level): Collection
+    {
+        return User::whereHas('roles', function ($query) use ($level) {
+            $query->where('name', $level->role_name);
+        })
+        ->where('is_active', true)
+        ->get();
     }
 } 

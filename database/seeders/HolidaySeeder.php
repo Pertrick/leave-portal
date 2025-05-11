@@ -12,62 +12,158 @@ class HolidaySeeder extends Seeder
     public function run(): void
     {
         $headOffice = Location::where('name', 'Head Office')->first();
+        $agbara = Location::where('name', 'Agbara')->first();
         $currentYear = Carbon::now()->year;
 
-        $holidays = [
+        // Fixed Date Holidays (same date every year)
+        $fixedHolidays = [
             [
                 'name' => 'New Year\'s Day',
-                'date' => Carbon::create($currentYear, 1, 1),
-                'location_id' => $headOffice->id,
+                'type' => 'public',
                 'description' => 'First day of the year',
-                'is_recurring' => true
-            ],
-            [
-                'name' => 'Good Friday',
-                'date' => Carbon::create($currentYear, 4, 7),
-                'location_id' => $headOffice->id,
-                'description' => 'Christian holiday commemorating the crucifixion of Jesus',
-                'is_recurring' => true
-            ],
-            [
-                'name' => 'Easter Monday',
-                'date' => Carbon::create($currentYear, 4, 10),
-                'location_id' => $headOffice->id,
-                'description' => 'Day after Easter Sunday',
-                'is_recurring' => true
+                'is_recurring' => true,
+                'recurrence_type' => 'fixed',
+                'recurrence_day' => 1,
+                'recurrence_month' => 1
             ],
             [
                 'name' => 'Labour Day',
-                'date' => Carbon::create($currentYear, 5, 1),
-                'location_id' => $headOffice->id,
+                'type' => 'public',
                 'description' => 'International Workers\' Day',
-                'is_recurring' => true
+                'is_recurring' => true,
+                'recurrence_type' => 'fixed',
+                'recurrence_day' => 1,
+                'recurrence_month' => 5
             ],
             [
                 'name' => 'Independence Day',
-                'date' => Carbon::create($currentYear, 6, 12),
-                'location_id' => $headOffice->id,
+                'type' => 'public',
                 'description' => 'National Independence Day',
-                'is_recurring' => true
+                'is_recurring' => true,
+                'recurrence_type' => 'fixed',
+                'recurrence_day' => 1,
+                'recurrence_month' => 10
             ],
             [
                 'name' => 'Christmas Day',
-                'date' => Carbon::create($currentYear, 12, 25),
-                'location_id' => $headOffice->id,
+                'type' => 'public',
                 'description' => 'Christian holiday celebrating the birth of Jesus',
-                'is_recurring' => true
-            ],
-            [
-                'name' => 'Boxing Day',
-                'date' => Carbon::create($currentYear, 12, 26),
-                'location_id' => $headOffice->id,
-                'description' => 'Day after Christmas',
-                'is_recurring' => true
+                'is_recurring' => true,
+                'recurrence_type' => 'fixed',
+                'recurrence_day' => 25,
+                'recurrence_month' => 12
             ]
         ];
 
-        foreach ($holidays as $holiday) {
-            Holiday::create($holiday);
+        // Easter-based Holidays
+        $easterHolidays = [
+            [
+                'name' => 'Good Friday',
+                'type' => 'public',
+                'description' => 'Christian holiday commemorating the crucifixion of Jesus',
+                'is_recurring' => true,
+                'recurrence_type' => 'easter',
+                'easter_offset' => -2 // 2 days before Easter Sunday
+            ],
+            [
+                'name' => 'Easter Monday',
+                'type' => 'public',
+                'description' => 'Day after Easter Sunday',
+                'is_recurring' => true,
+                'recurrence_type' => 'easter',
+                'easter_offset' => 1 // 1 day after Easter Sunday
+            ]
+        ];
+
+        // Custom Rule Holidays
+        $customHolidays = [
+            [
+                'name' => 'Democracy Day',
+                'type' => 'public',
+                'description' => 'National Democracy Day',
+                'is_recurring' => true,
+                'recurrence_type' => 'fixed',
+                'recurrence_day' => 12,
+                'recurrence_month' => 6
+            ],
+            [
+                'name' => 'Company Foundation Day',
+                'type' => 'company',
+                'description' => 'Anniversary of company foundation',
+                'is_recurring' => true,
+                'recurrence_type' => 'fixed',
+                'recurrence_day' => 15,
+                'recurrence_month' => 3
+            ]
+        ];
+
+        // Location-specific Holidays
+        $locationHolidays = [
+            [
+                'name' => 'Head Office Maintenance Day',
+                'type' => 'location',
+                'location_id' => $headOffice->id,
+                'description' => 'Annual maintenance day for Head Office',
+                'is_recurring' => true,
+                'recurrence_type' => 'custom',
+                'custom_rule' => [
+                    'type' => 'first',
+                    'month' => 7,
+                    'day' => 1 // First Monday of July
+                ]
+            ],
+            [
+                'name' => 'Agbara Community Day',
+                'type' => 'location',
+                'location_id' => $agbara->id,
+                'description' => 'Annual community day for Agbara location',
+                'is_recurring' => true,
+                'recurrence_type' => 'custom',
+                'custom_rule' => [
+                    'type' => 'last',
+                    'month' => 9,
+                    'day' => 1 // Last Monday of September
+                ]
+            ]
+        ];
+
+        // Create fixed date holidays
+        foreach ($fixedHolidays as $holiday) {
+            foreach ([$headOffice, $agbara] as $location) {
+                $date = Carbon::create($currentYear, $holiday['recurrence_month'], $holiday['recurrence_day']);
+                Holiday::create(array_merge($holiday, [
+                    'location_id' => $location->id,
+                    'date' => $date
+                ]));
+            }
+        }
+
+        // Create Easter-based holidays
+        foreach ($easterHolidays as $holiday) {
+            foreach ([$headOffice, $agbara] as $location) {
+                $date = (new Holiday($holiday))->getDateForYear($currentYear);
+                Holiday::create(array_merge($holiday, [
+                    'location_id' => $location->id,
+                    'date' => $date
+                ]));
+            }
+        }
+
+        // Create custom rule holidays
+        foreach ($customHolidays as $holiday) {
+            foreach ([$headOffice, $agbara] as $location) {
+                $date = (new Holiday($holiday))->getDateForYear($currentYear);
+                Holiday::create(array_merge($holiday, [
+                    'location_id' => $location->id,
+                    'date' => $date
+                ]));
+            }
+        }
+
+        // Create location-specific holidays
+        foreach ($locationHolidays as $holiday) {
+            $date = (new Holiday($holiday))->getDateForYear($currentYear);
+            Holiday::create(array_merge($holiday, ['date' => $date]));
         }
     }
 } 

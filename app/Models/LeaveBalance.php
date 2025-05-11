@@ -13,18 +13,18 @@ class LeaveBalance extends Model
         'user_id',
         'leave_type_id',
         'year',
-        'total_days',
-        'used_days',
-        'remaining_days',
-        'carried_over_days'
+        'total_entitled_days',
+        'days_taken',
+        'days_remaining',
+        'days_carried_forward'
     ];
 
     protected $casts = [
         'year' => 'integer',
-        'total_days' => 'integer',
-        'used_days' => 'integer',
-        'remaining_days' => 'integer',
-        'carried_over_days' => 'integer'
+        'total_entitled_days' => 'integer',
+        'days_taken' => 'integer',
+        'days_remaining' => 'integer',
+        'days_carried_forward' => 'integer'
     ];
 
     public function user(): BelongsTo
