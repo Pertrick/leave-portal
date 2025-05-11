@@ -67,7 +67,7 @@ class RegisteredUserController extends Controller
 
             event(new Registered($user, $validated['password']));
 
-            AccountRequest::processed($validated['staff_id'], $user->id);
+            AccountRequest::processed($validated['staff_id'], auth()->id());
             
             DB::commit();
 

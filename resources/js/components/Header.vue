@@ -1,12 +1,21 @@
 <script setup lang="ts">
-import { type BreadcrumbItem } from '@/types';
+import { type NavigationItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
 import { ChevronRight } from 'lucide-vue-next';
 
-defineProps<{
-    breadcrumbs: BreadcrumbItem[];
+const props = defineProps<{
+    breadcrumbs: NavigationItem[];
     title: string;
 }>();
+
+const getFullPath = (item: NavigationItem): string => {
+    if (item.path.startsWith('/')) {
+        return item.path;
+    }
+    return `/${item.path}`;
+};
+
+defineExpose({});
 </script>
 
 <template>
@@ -17,8 +26,8 @@ defineProps<{
         <nav class="flex items-center space-x-1 px-4 pb-3 text-sm">
             <Link
                 v-for="(breadcrumb, index) in breadcrumbs"
-                :key="breadcrumb.href"
-                :href="breadcrumb.href"
+                :key="breadcrumb.id"
+                :href="getFullPath(breadcrumb)"
                 class="flex items-center text-muted-foreground hover:text-foreground"
                 :class="{ 'text-foreground': index === breadcrumbs.length - 1 }"
             >

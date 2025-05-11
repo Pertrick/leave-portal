@@ -1,6 +1,11 @@
-export interface BreadcrumbItem {
+export interface NavigationItem {
+    id: number;
+    path: string;
     title: string;
-    href: string;
     icon?: string;
-    active?: boolean;
+    roles?: string[];
+    children?: NavigationItem[];
+    parent_id?: number;
+    order?: number;
+    is_active?: boolean;
 } 

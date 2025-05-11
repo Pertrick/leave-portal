@@ -41,7 +41,7 @@ class ContactHRController extends Controller
 
             DB::commit();
 
-            return back()->with('status', 'Your request has been submitted. HR will contact you soon.');
+            return back()->with('success', 'Your request has been submitted. HR will contact you soon.');
         } catch (\Exception $e) {
             DB::rollBack();
             

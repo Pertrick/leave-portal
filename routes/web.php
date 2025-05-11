@@ -11,7 +11,7 @@ Route::get('/', function () {
 
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth', 'verified',])->name('dashboard');
 
 Route::get('/contact-hr', [ContactHRController::class, 'show'])->name('contact.hr');
 Route::post('/contact-hr', [ContactHRController::class, 'submit'])->name('contact.hr.submit');
@@ -23,3 +23,4 @@ Route::post('/contact-hr', [ContactHRController::class, 'submit'])->name('contac
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
+require __DIR__.'/leave.php';

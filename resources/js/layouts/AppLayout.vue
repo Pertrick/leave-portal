@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
-import { type BreadcrumbItem } from '@/types';
+import { computed, onMounted } from 'vue';
+import { type NavigationItem } from '@/types';
 import Sidebar from '@/components/Sidebar.vue';
 import Header from '@/components/Header.vue';
 
@@ -10,18 +10,50 @@ const props = defineProps<{
 }>();
 
 const pageTitle = computed(() => {
-    return props.title || usePage().props.title || 'Leave Portal';
+    return props.title || usePage().props.title as string || 'Leave Portal';
 });
 
-const breadcrumbs = computed<BreadcrumbItem[]>(() => {
+const navigation = computed<NavigationItem[]>(() => {
     const page = usePage();
-    return page.props.breadcrumbs || [];
+    const nav = (page.props.navigation as NavigationItem[]) || [];
+    console.log('Navigation data:', nav);
+    return nav;
 });
 
-const navigation = computed(() => {
+const breadcrumbs = computed<NavigationItem[]>(() => {
     const page = usePage();
-    return page.props.navigation || [];
+    const crumbs = (page.props.breadcrumbs as NavigationItem[]) || [];
+    console.log('Breadcrumbs data:', crumbs);
+    return crumbs;
 });
+
+const currentTitle = computed(() => {
+    const path = usePage().url;
+    
+    // First check children
+    for (const item of navigation.value) {
+        if (item.children) {
+            const child = item.children.find(child => 
+                path.startsWith(`/${child.path}`)
+            );
+            if (child) return child.title;
+        }
+    }
+    
+    // Then check parent items
+    const parent = navigation.value.find(item => 
+        path.startsWith(`/${item.path}`)
+    );
+    
+    return parent?.title || 'Dashboard';
+});
+
+onMounted(() => {
+    console.log('AppLayout mounted');
+    console.log('Page props:', usePage().props);
+});
+
+defineExpose({});
 </script>
 
 <template>
@@ -29,7 +61,7 @@ const navigation = computed(() => {
         <Sidebar :navigation="navigation" />
         
         <div class="flex flex-1 flex-col overflow-hidden">
-            <Header :breadcrumbs="breadcrumbs" :title="pageTitle" />
+            <Header :breadcrumbs="breadcrumbs" :title="currentTitle" />
             
             <main class="flex-1 overflow-y-auto p-4">
                 <slot />

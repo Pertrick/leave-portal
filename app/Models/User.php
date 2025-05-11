@@ -12,6 +12,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Spatie\Permission\Traits\HasRoles;
 use Ramsey\Uuid\Uuid;
@@ -127,4 +128,5 @@ class User extends Authenticatable
     {
         return $this->settings ?? $this->settings()->create(UserSetting::getDefaults());
     }
+    
 }

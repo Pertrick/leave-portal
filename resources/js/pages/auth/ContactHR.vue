@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
+import { ToastService } from '@/services/toast';
 
 const form = useForm({
     staff_id: '',
@@ -17,7 +18,11 @@ const form = useForm({
 const submit = () => {
     form.post(route('contact.hr.submit'), {
         onSuccess: () => {
+            ToastService.success('Request submitted successfully!. HR will contact you soon.');
             form.reset();
+        },
+        onError: (errors) => {
+            ToastService.error('Failed to submit request. Please check the form for errors.');
         },
     });
 };

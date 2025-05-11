@@ -11,27 +11,30 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Leave extends Model
 {
     protected $fillable = [
+        'uuid',
         'user_id',
         'leave_type_id',
         'start_date',
         'end_date',
-        'total_days',
+        'calendar_days',
+        'working_days',
         'reason',
+        'applicant_comment',
+        'replacement_staff_name',
+        'replacement_staff_phone',
+        'attachment',
+        'current_approval_level',
+        'current_approval_id',
         'status',
-        'medical_proof',
-        'approved_by',
-        'approved_at',
-        'rejected_by',
-        'rejected_at',
-        'rejection_reason'
+        'is_cancelled'
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
-        'total_days' => 'integer',
-        'approved_at' => 'datetime',
-        'rejected_at' => 'datetime'
+        'calendar_days' => 'integer',
+        'working_days' => 'integer',
+        'is_cancelled' => 'boolean'
     ];
 
     public function user(): BelongsTo
@@ -57,5 +60,10 @@ class Leave extends Model
     public function approvals(): HasMany
     {
         return $this->hasMany(LeaveApproval::class);
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
     }
 } 

@@ -25,8 +25,9 @@ return new class extends Migration
             $table->string('replacement_staff_name')->nullable(); // e.g., "James Smith"
             $table->string('replacement_staff_phone')->nullable(); // e.g., "08012345678"
             $table->string('attachment')->nullable();
-            $table->string('current_approval_level')->nullable(); //null, supervisor, hod
+            $table->string('current_approval_level')->nullable(); //draft,null, supervisor, hod
             $table->string('current_approval_id')->nullable();//2 (or NULL if finished) 
+            $table->enum('status', ['draft', 'pending', 'approved', 'rejected'])->default('draft'); // Leave status: draft, pending, approved, rejected
             $table->boolean('is_cancelled')->default(false);
             $table->timestamps();
         });
