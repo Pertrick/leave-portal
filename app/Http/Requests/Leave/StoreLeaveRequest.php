@@ -32,6 +32,7 @@ class StoreLeaveRequest extends FormRequest
             'start_date' => 'required|date|after_or_equal:today',
             'end_date' => 'required|date|after_or_equal:start_date',
             'reason' => 'required|string|min:10',
+            'status' => 'required|string|in:pending',
             'applicant_comment' => 'nullable|string',
             'replacement_staff_name' => 'nullable|string|max:255',
             'replacement_staff_phone' => 'nullable|string|max:20',

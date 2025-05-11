@@ -34,6 +34,7 @@ class SaveDraftRequest extends FormRequest
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'reason' => 'nullable|string|min:10',
             'applicant_comment' => 'nullable|string',
+            'status' => 'required|string|in:draft',
             'replacement_staff_name' => 'nullable|string|max:255',
             'replacement_staff_phone' => 'nullable|string|max:20',
             'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',

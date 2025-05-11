@@ -225,7 +225,7 @@ class LeaveApplicationService
     {
         if (isset($data['start_date']) && isset($data['end_date'])) {
             $data['calendar_days'] = $this->calculateCalendarDays($data['start_date'], $data['end_date']);
-            $data['working_days'] = $this->calculateWorkingDays($data['start_date'], $data['end_date']);
+            $data['working_days'] = $this->calculateWorkingDays(Carbon::parse($data['start_date']), Carbon::parse($data['end_date']));
         } else {
             $data['calendar_days'] = 0;
             $data['working_days'] = 0;

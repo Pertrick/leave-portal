@@ -66,7 +66,7 @@ class LeaveController extends Controller
     public function saveDraft(SaveDraftRequest $request)
     {
         $validated = $request->validated();
-        $leave = $this->leaveService->create($validated, auth()->user());
+        $leave = $this->leaveService->createDraft($validated, auth()->user());
 
         return redirect()->route('leaves.drafts')
             ->with('success', 'Leave application saved as draft successfully.');
