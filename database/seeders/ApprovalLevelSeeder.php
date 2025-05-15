@@ -16,12 +16,14 @@ class ApprovalLevelSeeder extends Seeder
                 'name' => 'Supervisor Approval',
                 'level' => 1,
                 'role_name' => 'Supervisor',
+                'is_active' => true,
                 'description' => 'First level approval by immediate supervisor'
             ],
             [
                 'name' => 'Department Head Approval',
                 'level' => 2,
-                'role_name' => 'Department Head',
+                'role_name' => 'HOD',
+                'is_active' => true,
                 'description' => 'Second level approval by department head'
             ],
             // [

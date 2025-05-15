@@ -26,7 +26,7 @@ class HandleRegisteredUser implements ShouldQueue
     /**
      * Handle the event.
      */
-    public function handle(Registered $event): void
+    public function handle(object $event): void
     {
         $user = $event->user;
         $password = $event->password;

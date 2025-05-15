@@ -5,6 +5,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\ContactHRController;
 use App\Http\Controllers\Admin\HolidayController;
+use App\Http\Controllers\LeaveController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
@@ -31,6 +32,8 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('holidays', HolidayController::class);
         Route::post('holidays/{holiday}/toggle', [HolidayController::class, 'toggleStatus'])->name('holidays.toggle');
     });
+
+    // Leave routes
 });
 
 require __DIR__.'/settings.php';

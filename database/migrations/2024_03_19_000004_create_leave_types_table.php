@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name'); // e.g., Annual, Sick, Maternity
             $table->boolean('requires_medical_proof')->default(false);
+            $table->json('weekend_days');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

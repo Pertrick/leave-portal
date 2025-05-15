@@ -28,7 +28,7 @@ class AccountRequest extends Model
         return $this->belongsTo(User::class, 'processed_by');
     }
 
-    public static function processed(string $staffId, ?int $processedBy = null): void
+    public static function markAsProcessed(string $staffId, ?int $processedBy = null): void
     {
         $request = self::where('staff_id', $staffId)
             ->where('status', config('account.request_status.pending'))

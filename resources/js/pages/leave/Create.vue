@@ -107,7 +107,18 @@
               <div class="md:col-span-2">
                 <div class="bg-gray-50 p-4 rounded-lg">
                   <p class="text-sm text-gray-600">
-                    Duration: <span class="font-semibold">{{ duration }} days</span>
+                    Duration: 
+
+                    <div v-if="durationLoading" class="inline-block">
+                      <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3.5-3.5L12 0v4a8 8 0 01-8 8z"></path>
+                      </svg>
+                    </div>
+
+                    <span v-else class="font-semibold text-sm">
+                      {{ duration }}
+                    </span>
                   </p>
                 </div>
               </div>
@@ -125,6 +136,18 @@
                 />
                 <InputError :message="form.errors.reason" class="mt-2" />
               </div>
+
+              <div class="md:col-span-2">
+                  <InputLabel for="applicant_comment" value="Additional Comments (Optional)" />
+                  <TextArea
+                    id="applicant_comment"
+                    v-model="form.applicant_comment"
+                    class="mt-1 block w-full"
+                    rows="3"
+                    placeholder="Any additional information you'd like to provide..."
+                  />
+                  <InputError :message="form.errors.applicant_comment" class="mt-2" />
+                </div>
 
               <!-- Replacement Staff -->
               <div>
@@ -206,9 +229,9 @@
               </SecondaryButton>
               <SecondaryButton
                 type="button"
-                @click="saveAsDraft"
+                @click="saveDraft"
                 :class="{ 'opacity-25': form.processing }"
-                :disabled="form.processing"
+                :disabled="isSubmitDisabled"
                 class="mr-3"
               >
                 Save as Draft
@@ -216,7 +239,7 @@
               <PrimaryButton
                 type="submit"
                 :class="{ 'opacity-25': form.processing }"
-                :disabled="form.processing"
+                 :disabled="isSubmitDisabled"
               >
                 Submit Application
               </PrimaryButton>
@@ -241,6 +264,9 @@ import InputError from '@/Components/InputError.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import SecondaryButton from '@/Components/SecondaryButton.vue'
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline/index.js'
+import { ToastService } from '@/services/toast';
+import { debounce } from 'lodash'
+
 
 const props = defineProps({
   leaveTypes: {
@@ -256,27 +282,32 @@ const props = defineProps({
 })
 
 const holidays = ref([])
+const durationLoading = ref(false)
+
 
 const form = useForm({
   leave_type_id: '',
   start_date: '',
   end_date: '',
   reason: '',
-  replacement_staff_name: '',
-  replacement_staff_phone: '',
-  attachment: null,
-  status: 'pending',
+  medical_proof: null,
+  status: 'draft',
+  calendar_days: 0,
+  working_days: 0
+
 })
 
 const minDate = new Date().toISOString().split('T')[0]
 
 const duration = computed(() => {
   if (!form.start_date || !form.end_date) return 0
-  const start = new Date(form.start_date)
-  const end = new Date(form.end_date)
-  const diffTime = Math.abs(end - start)
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return diffDays + 1 // Include both start and end dates
+  return `${form.working_days} working days (${form.calendar_days} calendar days)`
+
+})
+
+const workingDays = computed(() => {
+  if (!form.start_date || !form.end_date) return 0
+  return form.working_days || 0
 })
 
 const selectedLeaveBalance = computed(() => {
@@ -289,40 +320,39 @@ const selectedLeaveType = computed(() => {
   return props.leaveTypes.find(type => type.id === parseInt(form.leave_type_id))
 })
 
+const isSubmitDisabled = computed(() => {
+  return form.processing || !form.start_date || !form.end_date || !form.leave_type_id
+})
+
+
 const submit = () => {
-  // Validate attachment for medical leave types
-  if (selectedLeaveType.value?.requires_medical_proof && !form.attachment) {
-    form.errors.attachment = 'Medical proof is required for this leave type.'
-    return
-  }
-
-  // Validate reason for non-draft submissions
-  if (form.status !== 'draft' && !form.reason) {
-    form.errors.reason = 'Please provide a reason for your leave request.'
-    return
-  }
-
   form.post(route('leaves.store'), {
     onSuccess: () => {
-      form.reset()
+      ToastService.success('Leave application submitted successfully')
     },
+    onError: (errors) => {
+      ToastService.error('Failed to submit leave application')
+    },
+    preserveScroll: true
   })
 }
 
-const saveAsDraft = () => {
-  form.status = 'draft'
+const saveDraft = () => {
   form.post(route('leaves.draft'), {
-    preserveScroll: true,
     onSuccess: () => {
-      form.clearErrors()
+      ToastService.success('Draft saved successfully')
     },
+    onError: (errors) => {
+      ToastService.error('Failed to save draft')
+    },
+    preserveScroll: true
   })
 }
 
 const updateDateRange = async () => {
   if (form.start_date && form.end_date) {
     try {
-      const response = await axios.get('/api/holidays', {
+      const response = await axios.get('admin/api/holidays', {
         params: {
           start_date: form.start_date,
           end_date: form.end_date
@@ -343,6 +373,37 @@ const formatDate = (date) => {
     day: 'numeric'
   })
 }
+
+// Watch for date changes to trigger backend calculation
+
+const calculateDuration = debounce((start, end, type) => {
+  durationLoading.value = true
+  axios.post(route('leaves.calculate-duration'), {
+    start_date: start,
+    end_date: end,
+    leave_type_id: type
+  })
+  .then(response => {
+    form.calendar_days = response.data.calendar_days
+    form.working_days = response.data.working_days
+  })
+  .catch(error => {
+    ToastService.error('Failed to calculate leave duration')
+    console.error(error)
+  })
+  .finally(() =>  {
+      durationLoading.value = false
+    })
+}, 300)
+
+watch([() => form.start_date, () => form.end_date, () => form.leave_type_id],
+  ([newStartDate, newEndDate, newLeaveType]) => {
+    if (newStartDate && newEndDate && newLeaveType) {
+      calculateDuration(newStartDate, newEndDate, newLeaveType)
+    }
+  }
+)
+
 
 // Watch for leave type changes to reset attachment if not required
 watch(() => form.leave_type_id, (newTypeId) => {

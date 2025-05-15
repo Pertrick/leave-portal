@@ -74,7 +74,15 @@ class Leave extends Model
         return $this->status === 'draft';
     }
 
+    public function getStartDateAttribute($value)
+    {
+        return \Carbon\Carbon::parse($value)->format('Y-m-d');
+    }
 
+    public function getEndDateAttribute($value)
+    {
+        return \Carbon\Carbon::parse($value)->format('Y-m-d');
+    }
 
     protected static function boot(): void
     {

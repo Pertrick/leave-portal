@@ -12,31 +12,59 @@ class LeaveTypeSeeder extends Seeder
         $leaveTypes = [
             [
                 'name' => 'Annual Leave',
-                'requires_medical_proof' => false
+                'requires_medical_proof' => false,
+                'weekend_days' => [
+                    'saturday' => false,
+                    'sunday' => false
+                ]
             ],
             [
                 'name' => 'Sick Leave',
-                'requires_medical_proof' => true
+                'requires_medical_proof' => true,
+                'weekend_days' => [
+                    'saturday' => false,
+                    'sunday' => false
+                ]
             ],
             [
                 'name' => 'Maternity Leave',
-                'requires_medical_proof' => true
+                'requires_medical_proof' => true,
+                'weekend_days' => [
+                    'saturday' => true,
+                    'sunday' => true
+                ]
             ],
             [
                 'name' => 'Paternity Leave',
-                'requires_medical_proof' => false
+                'requires_medical_proof' => false,
+                'weekend_days' => [
+                    'saturday' => true,
+                    'sunday' => true
+                ]
             ],
             [
                 'name' => 'Compassionate Leave',
-                'requires_medical_proof' => false
+                'requires_medical_proof' => false,
+                'weekend_days' => [
+                    'saturday' => false,
+                    'sunday' => false
+                ]
             ],
             [
                 'name' => 'Casual/Personal Leave',
-                'requires_medical_proof' => false
+                'requires_medical_proof' => false,
+                'weekend_days' => [
+                    'saturday' => false,
+                    'sunday' => false
+                ]
             ],
             [
                 'name' => 'Field Work',
-                'requires_medical_proof' => false
+                'requires_medical_proof' => false,
+                'weekend_days' => [
+                    'saturday' => true,
+                    'sunday' => true
+                ]
             ]
         ];
 

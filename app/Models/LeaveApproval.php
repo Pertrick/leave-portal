@@ -12,11 +12,13 @@ class LeaveApproval extends Model
     protected $fillable = [
         'leave_id',
         'user_id',
+        'approver_id',
         'status',
-        'comments',
-        'approved_at',
-        'rejected_at',
-        'rejection_reason'
+        'remark',
+        'sequence',
+        'level_id',
+        'action_date',
+        // 'rejection_reason'
     ];
 
     protected $casts = [

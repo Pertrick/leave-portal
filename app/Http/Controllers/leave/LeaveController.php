@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Leave;
 
-use Carbon\Carbon;
-use App\Models\User;
 use Inertia\Inertia;
 use App\Models\Leave;
 use Inertia\Response;
@@ -64,14 +62,20 @@ class LeaveController extends Controller
             ->with('success', 'Leave application submitted successfully.');
     }
 
-    public function saveDraft(SaveDraftRequest $request)
+    public function saveDraft(SaveDraftRequest $request, ?Leave $leave = null)
     {
-        $validated = $request->validated();
-        $leave = $this->leaveService->createDraft($validated, auth()->user());
+        $userDrafts = $this->leaveService->getUserDrafts(auth()->user());
+        if (config('leave.max_draft_leave_per_user') && $userDrafts->count() >= config('leave.max_draft_leave_per_user')) {
+            return back()->with('error', 'You have reached the maximum number of draft leave applications.');
+        }
 
+        $validated = $request->validated();
+        $leave = $this->leaveService->createOrUpdateDraft($validated, auth()->user(), $leave);
+    
         return redirect()->route('leaves.drafts')
-            ->with('success', 'Leave application saved as draft successfully.');
+            ->with('success', 'Leave draft saved successfully.');
     }
+    
 
     public function show(Leave $leave): Response
     {
@@ -84,24 +88,27 @@ class LeaveController extends Controller
 
     public function edit(Leave $leave): Response|RedirectResponse
     {
+        abort_if(auth()->id() != $leave->user_id, 403, 'You are not authorized to edit this leave application.');
+
         if (!$leave->isPending() && !$leave->isDraft()) {
             return redirect()->route('leaves.index')
                 ->with('error', 'Only pending leave applications can be edited.');
         }
 
         $leaveTypes = $this->leaveService->getLeaveTypes();
+        $leaveBalances = $this->leaveService->getLeaveBalances(Auth::user());
         
-        $leave->start_date = Carbon::parse($leave->start_date)->format('m/d/Y');
-        $leave->end_date = Carbon::parse($leave->end_date)->format('m/d/Y');
-
         return Inertia::render('leave/Edit', [
             'leave' => $leave,
             'leaveTypes' => $leaveTypes,
+            'leaveBalances' => $leaveBalances,
         ]);
     }
 
     public function update(Request $request, Leave $leave)
     {
+        abort_if(auth()->id() != $leave->user_id, 403, 'You are not authorized to update this leave application.');
+
         if (!$leave->isPending()) {
             return redirect()->route('leaves.index')
                 ->with('error', 'Only pending leave applications can be updated.');
@@ -126,7 +133,9 @@ class LeaveController extends Controller
 
     public function destroy(Leave $leave)
     {
-        if (!$leave->isPending()) {
+        abort_if(auth()->id() != $leave->user_id, 403, 'You are not authorized to delete this leave application.');
+        
+        if (!$leave->isPending() && !$leave->isDraft()) {
             return redirect()->route('leaves.index')
                 ->with('error', 'Only pending leave applications can be cancelled.');
         }
@@ -135,5 +144,24 @@ class LeaveController extends Controller
 
         return redirect()->route('leaves.index')
             ->with('success', 'Leave application cancelled successfully.');
+    }
+
+    /**
+     * Calculate leave duration based on dates and leave type
+     */
+    public function calculateDuration(Request $request)
+    {
+       $validated = $request->validate([
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'leave_type_id' => 'required|exists:leave_types,id'
+        ]);
+
+
+       $calculateDays = $this->leaveService->calculateDays($validated);
+        return response()->json([
+            'calendar_days' => $calculateDays['calendar_days'],
+            'working_days' => $calculateDays['working_days']
+        ]);
     }
 } 

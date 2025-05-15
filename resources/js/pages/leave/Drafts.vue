@@ -3,20 +3,24 @@
     <template #header>
       <div class="flex justify-between items-center">
         <div>
-          <h2 class="text-2xl font-bold text-gray-900">Draft Applications</h2>
-          <p class="mt-1 text-sm text-gray-500">Manage your pending leave applications</p>
+          <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            Draft Applications
+          </h2>
+          <p class="mt-1 text-sm text-gray-600">
+            Complete and submit your draft leave requests
+          </p>
         </div>
-        <div class="flex space-x-3">
+        <div class="flex items-center space-x-3">
           <Link
             :href="route('leaves.index')"
-            class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg font-medium text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-sm"
+            class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150"
           >
-            <DocumentTextIcon class="w-4 h-4 mr-2 text-gray-500" />
-            View All
+            <ArrowLeftIcon class="w-4 h-4 mr-2" />
+            Back to Applications
           </Link>
           <Link
             :href="route('leaves.create')"
-            class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-sm"
+            class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 shadow-sm hover:shadow-md"
           >
             <PlusIcon class="w-4 h-4 mr-2" />
             New Application
@@ -62,7 +66,11 @@
                     {{ getLeaveTypeName(draft.leave_type_id) }}
                   </h3>
                   <p class="mt-1 text-sm text-gray-500">
-                    Created {{ formatDate(draft.created_at) }}
+                    Created {{ formatDate(draft.created_at) }} 
+                  </p>
+                 
+                  <p class="mt-1 text-sm text-gray-500">
+                     Last Updated {{ formatDate(draft.updated_at) }}
                   </p>
                 </div>
                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-200">
@@ -146,8 +154,10 @@
 </template>
 
 <script setup>
-import { Link } from '@inertiajs/vue3'
+import { ref } from 'vue'
+import { Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import { ToastService } from '@/services/toast'
 import {
   PlusIcon,
   DocumentIcon,
@@ -156,6 +166,7 @@ import {
   ClockIcon,
   PencilIcon,
   TrashIcon,
+  ArrowLeftIcon,
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
@@ -175,7 +186,14 @@ const formatDate = (date) => {
 
 const deleteDraft = (draft) => {
   if (confirm('Are you sure you want to delete this draft?')) {
-    // Implement draft deletion logic
+    router.delete(route('leaves.destroy', draft.id), {
+      onSuccess: () => {
+        ToastService.success('Draft deleted successfully')
+      },
+      onError: () => {
+        ToastService.error('Failed to delete draft')
+      }
+    })
   }
 }
 </script>

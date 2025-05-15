@@ -13,10 +13,11 @@ return new class extends Migration
     {
         Schema::create('leave_approvals', function (Blueprint $table) {
             $table->id();
-            $table->foreignUuid('leave_id')->constrained('leaves')->onDelete('cascade');
+            $table->foreignId('leave_id')->constrained('leaves')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained('leaves')->onDelete('cascade');
             $table->foreignId('approver_id')->constrained('users')->onDelete('cascade');
 
-            $table->string('level'); //supervisor or hod
+            $table->string('level_id'); //supervisor or hod
             $table->integer('sequence')->default(1); 
             $table->enum('status', ['approved', 'rejected', 'pending'])->default('pending');
             $table->text('remark')->nullable();

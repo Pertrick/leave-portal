@@ -106,7 +106,18 @@
                 <div class="md:col-span-2">
                   <div class="bg-gray-50 p-4 rounded-lg">
                     <p class="text-sm text-gray-600">
-                      Duration: <span class="font-semibold">{{ duration }} days</span>
+                      Duration: 
+
+                      <div v-if="durationLoading" class="inline-block">
+                      <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3.5-3.5L12 0v4a8 8 0 01-8 8z"></path>
+                      </svg>
+                    </div>
+
+                    <span v-else class="font-semibold text-sm">
+                      {{ duration }}
+                    </span>
                     </p>
                   </div>
                 </div>
@@ -202,7 +213,7 @@
                   class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150"
                   :disabled="form.processing"
                 >
-                  Save as Draft
+                  Update Draft
                 </button>
                 <button
                   type="submit"
@@ -222,7 +233,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { useForm, Link } from '@inertiajs/vue3'
+import { useForm, Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import InputLabel from '@/Components/InputLabel.vue'
 import TextInput from '@/Components/TextInput.vue'
@@ -231,6 +242,8 @@ import SelectInput from '@/Components/SelectInput.vue'
 import FileInput from '@/Components/FileInput.vue'
 import InputError from '@/Components/InputError.vue'
 import { ArrowLeftIcon, DocumentIcon } from '@heroicons/vue/24/outline/index.js'
+import { ToastService } from '@/services/toast';
+import { debounce } from 'lodash'
 
 const props = defineProps({
   leave: Object,
@@ -242,6 +255,9 @@ const props = defineProps({
   }
 })
 
+
+const durationLoading = ref(false)
+
 const form = useForm({
   leave_type_id: props.leave.leave_type_id,
   start_date: props.leave.start_date,
@@ -251,18 +267,23 @@ const form = useForm({
   replacement_staff_name: props.leave.replacement_staff_name || '',
   replacement_staff_phone: props.leave.replacement_staff_phone || '',
   attachment: null,
-  status: 'pending',
+  status: props.status,
+  calendar_days: props.leave.calendar_days || 0,
+  working_days: props.leave.working_days || 0
+
 })
 
 const minDate = new Date().toISOString().split('T')[0]
 
 const duration = computed(() => {
   if (!form.start_date || !form.end_date) return 0
-  const start = new Date(form.start_date)
-  const end = new Date(form.end_date)
-  const diffTime = Math.abs(end - start)
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return diffDays + 1 // Include both start and end dates
+  return `${form.working_days} working days (${form.calendar_days} calendar days)`
+
+})
+
+const workingDays = computed(() => {
+  if (!form.start_date || !form.end_date) return 0
+  return form.working_days || 0
 })
 
 const selectedLeaveBalance = computed(() => {
@@ -288,22 +309,26 @@ const submit = () => {
     return
   }
 
-  form.put(route('leaves.update', props.leave.id), {
+  form.post(route('leaves.store', props.leave.id), {
     onSuccess: () => {
-      // The success message will be handled by the flash message in the layout
+      ToastService.success('Leave application submitted successfully')
     },
     onError: () => {
-      // The error message will be handled by the flash message in the layout
+      ToastService.error('Failed to submit leave application')
     },
   })
 }
 
 const saveAsDraft = () => {
   form.status = 'draft'
-  form.put(route('leaves.update', props.leave.id), {
+  form.post(route('leaves.draft', props.leave.uuid), {
     preserveScroll: true,
     onSuccess: () => {
+      ToastService.success('Draft updated successfully')
       form.clearErrors()
+    },
+    onError: () => {
+      ToastService.error('Failed to updated draft')
     },
   })
 }
@@ -315,4 +340,35 @@ watch(() => form.leave_type_id, (newTypeId) => {
     form.attachment = null
   }
 })
+
+// Watch for date changes to trigger backend calculation
+
+const calculateDuration = debounce((start, end, type) => {
+  durationLoading.value = true
+  axios.post(route('leaves.calculate-duration'), {
+    start_date: start,
+    end_date: end,
+    leave_type_id: type
+  })
+  .then(response => {
+    form.calendar_days = response.data.calendar_days
+    form.working_days = response.data.working_days
+  })
+  .catch(error => {
+    ToastService.error('Failed to calculate leave duration')
+    console.error(error)
+  })
+  .finally(() =>  {
+      durationLoading.value = false
+    })
+}, 300)
+
+watch([() => form.start_date, () => form.end_date, () => form.leave_type_id],
+  ([newStartDate, newEndDate, newLeaveType]) => {
+    if (newStartDate && newEndDate && newLeaveType) {
+      calculateDuration(newStartDate, newEndDate, newLeaveType)
+    }
+  }
+)
+
 </script> 

@@ -8,15 +8,17 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
     // Leave Applications
+    Route::post('/leaves/calculate-duration', [LeaveController::class, 'calculateDuration'])->name('leaves.calculate-duration');
     Route::get('/leaves', [LeaveController::class, 'index'])->name('leaves.index');
     Route::get('/leaves/drafts', [LeaveController::class, 'drafts'])->name('leaves.drafts');
     Route::get('/leaves/create', [LeaveController::class, 'create'])->name('leaves.create');
     Route::post('/leaves', [LeaveController::class, 'store'])->name('leaves.store');
-    Route::post('/leaves/draft', [LeaveController::class, 'saveDraft'])->name('leaves.draft');
     Route::get('/leaves/{leave}', [LeaveController::class, 'show'])->name('leaves.show');
+    Route::post('/leaves/draft/{leave?}', [LeaveController::class, 'saveDraft'])->name('leaves.draft');
     Route::get('/leaves/{leave}/edit', [LeaveController::class, 'edit'])->name('leaves.edit');
     Route::put('/leaves/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
     Route::delete('/leaves/{leave}', [LeaveController::class, 'destroy'])->name('leaves.destroy');
+
 
     // Leave Approvals
     Route::middleware(['can:approve-leaves'])->group(function () {

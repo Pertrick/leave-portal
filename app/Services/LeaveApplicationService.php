@@ -29,10 +29,10 @@ class LeaveApplicationService
         $calendarDays = $startDate->diffInDays($endDate) + 1;
 
         // Calculate working days (excluding weekends and holidays)
-        $workingDays = $this->calculateWorkingDays($startDate, $endDate, $user->location_id);
+        $workingDays = $this->calculateWorkingDays($startDate, $endDate, $leaveType);
 
         // Get holidays in the date range
-        $holidays = $this->getHolidaysBetween($startDate, $endDate, $user->location_id);
+        $holidays = $this->getHolidaysBetween($startDate, $endDate);
 
         try {
             DB::beginTransaction();
@@ -72,9 +72,10 @@ class LeaveApplicationService
                 // Create approval record for each approver at this level
                 foreach ($approvers as $approver) {
                     $leave->approvals()->create([
-                        'user_id' => $approver->id,
+                        'user_id' => $user->id,
+                        'approver_id' => $approver->id,
                         'status' => 'pending',
-                        'order' => $level->level,
+                        'sequence' => $level->level,
                         'level_id' => $level->id
                     ]);
                 }
@@ -131,10 +132,21 @@ class LeaveApplicationService
         }
     }
 
-    public function createDraft(array $data, User $user): Leave
+    public function createOrUpdateDraft(array $data, User $user, ?Leave $leave = null): Leave
     {
         $data = $this->calculateDays($data);
-        return Auth::user()->leaves()->create($data);
+        if ($leave && $leave->isDraft()) {
+            $leave->update($data);
+        } else {
+            $leave = $user->leaves()->create($data);
+        }
+        // Optionally handle file upload if needed:
+        if (isset($data['attachment'])) {
+            $path = $data['attachment']->store('attachments', 'public');
+            $leave->update(['attachment_path' => $path]);
+        }
+
+        return $leave;
     }
 
     public function update(Leave $leave, array $data): Leave
@@ -221,11 +233,16 @@ class LeaveApplicationService
             ->get();
     }
 
-    private function calculateDays(array $data): array
+    public function calculateDays(array $data): array
     {
         if (isset($data['start_date']) && isset($data['end_date'])) {
             $data['calendar_days'] = $this->calculateCalendarDays($data['start_date'], $data['end_date']);
-            $data['working_days'] = $this->calculateWorkingDays(Carbon::parse($data['start_date']), Carbon::parse($data['end_date']));
+            
+            $startDate = Carbon::parse($data['start_date']);
+            $endDate = Carbon::parse($data['end_date']);
+            $leaveType = LeaveType::findOrFail($data['leave_type_id']);
+            
+            $data['working_days'] = $this->calculateWorkingDays($startDate, $endDate,  $leaveType);
         } else {
             $data['calendar_days'] = 0;
             $data['working_days'] = 0;
@@ -246,20 +263,25 @@ class LeaveApplicationService
         return $start->diffInDays($end) + 1; // Include both start and end dates
     }
 
-    private function calculateWorkingDays(Carbon $startDate, Carbon $endDate, ?int $locationId = null): int
+    private function calculateWorkingDays(Carbon $startDate, Carbon $endDate, ?LeaveType $leaveType = null): int
     {
         $days = 0;
         $currentDate = $startDate->copy();
 
+        // Get holidays between dates
+        $holidays = Holiday::whereBetween('date', [$startDate, $endDate])
+            ->pluck('date')
+            ->toArray();
+
         while ($currentDate->lte($endDate)) {
-            // Skip weekends
-            if ($currentDate->isWeekend()) {
+            // Skip configured weekend days if leave type is provided
+            if ($leaveType && $leaveType->isWeekendDay($currentDate->dayOfWeek)) {
                 $currentDate->addDay();
                 continue;
             }
 
             // Skip holidays
-            if ($this->isHoliday($currentDate, $locationId)) {
+            if (in_array($currentDate->format('Y-m-d'), $holidays)) {
                 $currentDate->addDay();
                 continue;
             }
