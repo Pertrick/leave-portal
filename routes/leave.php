@@ -21,12 +21,12 @@ Route::middleware(['auth'])->group(function () {
 
 
     // Leave Approvals
-    Route::middleware(['can:approve-leaves'])->group(function () {
+   
         Route::get('/leave/approvals', [LeaveApprovalController::class, 'index'])->name('leave.approvals.index');
         Route::get('/leave/approvals/{leave}', [LeaveApprovalController::class, 'show'])->name('leave.approvals.show');
         Route::post('/leave/approvals/{leave}/approve', [LeaveApprovalController::class, 'approve'])->name('leave.approvals.approve');
         Route::post('/leave/approvals/{leave}/reject', [LeaveApprovalController::class, 'reject'])->name('leave.approvals.reject');
-    });
+    
 
     // Leave Types
     Route::middleware(['can:manage-leave-types'])->group(function () {

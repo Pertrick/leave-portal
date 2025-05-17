@@ -155,14 +155,14 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div class="flex space-x-2">
                         <Link
-                          :href="route('leaves.show', leave.id)"
+                          :href="route('leaves.show', leave.uuid)"
                           class="text-indigo-600 hover:text-indigo-900"
                         >
                           View
                         </Link>
                         <Link
                           v-if="leave.status === 'pending'"
-                          :href="route('leaves.edit', leave.id)"
+                          :href="route('leaves.edit', leave.uuid)"
                           class="text-blue-600 hover:text-blue-900"
                         >
                           Edit
@@ -186,25 +186,16 @@
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <Modal :show="showDeleteModal" @close="closeDeleteModal">
-      <div class="p-6 max-w-md mx-auto">
-        <div class="text-center">
-          <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-            <XCircleIcon class="h-6 w-6 text-red-600" />
-          </div>
-          <h2 class="text-lg font-medium text-gray-900">
-            Cancel Leave Application
-          </h2>
-          <p class="mt-2 text-sm text-gray-600">
-            Are you sure you want to cancel this leave application? This action cannot be undone.
-          </p>
-        </div>
-        <div class="mt-6 flex justify-center space-x-3">
-          <SecondaryButton @click="closeDeleteModal">No, Keep It</SecondaryButton>
-          <DangerButton @click="deleteLeave">Yes, Cancel It</DangerButton>
-        </div>
-      </div>
-    </Modal>
+    <ConfirmationModal
+      :show="showDeleteModal"
+      type="danger"
+      title="Cancel Leave Application"
+      message="Are you sure you want to cancel this leave application? This action cannot be undone."
+      confirm-text="Yes, Cancel It"
+      cancel-text="No, Keep It"
+      @close="closeDeleteModal"
+      @confirm="deleteLeave"
+    />
   </AppLayout>
 </template>
 
@@ -217,6 +208,7 @@ import SecondaryButton from '@/Components/SecondaryButton.vue'
 import DangerButton from '@/Components/DangerButton.vue'
 import { PlusIcon, ClockIcon, CheckCircleIcon, XCircleIcon, DocumentIcon } from '@heroicons/vue/24/outline/index.js'
 import { useFlash } from '@/composables/useFlash'
+import ConfirmationModal from '@/Components/ConfirmationModal.vue'
 
 const { flash } = useFlash()
 const { proxy } = getCurrentInstance()

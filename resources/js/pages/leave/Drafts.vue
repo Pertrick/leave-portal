@@ -152,25 +152,16 @@
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <Modal :show="showDeleteModal" @close="closeDeleteModal">
-      <div class="p-6 max-w-md mx-auto">
-        <div class="text-center">
-          <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-            <TrashIcon class="h-6 w-6 text-red-600" />
-          </div>
-          <h2 class="text-lg font-medium text-gray-900">
-            Delete Draft Application
-          </h2>
-          <p class="mt-2 text-sm text-gray-600">
-            Are you sure you want to delete this draft application? This action cannot be undone.
-          </p>
-        </div>
-        <div class="mt-6 flex justify-center space-x-3">
-          <SecondaryButton @click="closeDeleteModal">No, Keep It</SecondaryButton>
-          <DangerButton @click="confirmDelete">Yes, Delete It</DangerButton>
-        </div>
-      </div>
-    </Modal>
+    <ConfirmationModal
+      :show="showDeleteModal"
+      type="danger"
+      title="Delete Draft Application"
+      message="Are you sure you want to delete this draft application? This action cannot be undone."
+      confirm-text="Yes, Delete It"
+      cancel-text="No, Keep It"
+      @close="closeDeleteModal"
+      @confirm="confirmDelete"
+    />
   </AppLayout>
 </template>
 
@@ -192,6 +183,7 @@ import {
   TrashIcon,
   ArrowLeftIcon,
 } from '@heroicons/vue/24/outline'
+import ConfirmationModal from '@/Components/ConfirmationModal.vue'
 
 const props = defineProps({
   drafts: Array,

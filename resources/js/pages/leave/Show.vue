@@ -163,15 +163,17 @@
     </div>
 
     <!-- Reject Modal -->
-    <Modal :show="showRejectModal" @close="closeRejectModal">
-      <form @submit.prevent="reject" class="p-6">
-        <h2 class="text-lg font-medium text-gray-900">
-          Reject Leave Application
-        </h2>
-        <p class="mt-1 text-sm text-gray-600">
-          Please provide a reason for rejecting this leave application.
-        </p>
-
+    <ConfirmationModal
+      :show="showRejectModal"
+      type="danger"
+      title="Reject Leave Application"
+      message="Please provide a reason for rejecting this leave application."
+      confirm-text="Reject Application"
+      :disabled="!form.rejection_reason"
+      @close="closeRejectModal"
+      @confirm="reject"
+    >
+      <template #content>
         <div class="mt-4">
           <InputLabel for="rejection_reason" value="Reason" />
           <TextArea
@@ -183,21 +185,8 @@
           />
           <InputError :message="form.errors.rejection_reason" class="mt-2" />
         </div>
-
-        <div class="mt-6 flex justify-end space-x-3">
-          <SecondaryButton @click="closeRejectModal">
-            Cancel
-          </SecondaryButton>
-          <DangerButton
-            type="submit"
-            :class="{ 'opacity-25': form.processing }"
-            :disabled="form.processing"
-          >
-            Reject Application
-          </DangerButton>
-        </div>
-      </form>
-    </Modal>
+      </template>
+    </ConfirmationModal>
   </AppLayout>
 </template>
 
@@ -217,6 +206,7 @@ import {
   PencilIcon,
   DocumentIcon,
 } from '@heroicons/vue/24/outline/index.js'
+import ConfirmationModal from '@/Components/ConfirmationModal.vue'
 
 const props = defineProps({
   leave: Object,

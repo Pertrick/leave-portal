@@ -9,11 +9,14 @@ use App\Models\Holiday;
 use App\Models\Location;
 use App\Models\LeaveType;
 use Illuminate\Support\Str;
+use App\Models\LeaveBalance;
 use App\Models\ApprovalLevel;
+use App\Models\LeaveApproval;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class LeaveApplicationService
 {
@@ -61,6 +64,8 @@ class LeaveApplicationService
                 throw new \InvalidArgumentException('No approval levels found.');
             }
 
+            $firstApproval = null;
+
             // Create leave approval records for each level
             foreach ($approvalLevels as $level) {
                 // Get approvers for this level
@@ -72,21 +77,30 @@ class LeaveApplicationService
 
                 // Create approval record for each approver at this level
                 foreach ($approvers as $approver) {
-                    $leave->approvals()->create([
+                    $leaveApproval = $leave->approvals()->create([
                         'user_id' => $user->id,
                         'approver_id' => $approver->id,
                         'status' => 'pending',
                         'sequence' => $level->level,
                         'level_id' => $level->id
                     ]);
+
+                    // Store the first approval record
+                    if ($level->level === $approvalLevels->first()->level && !$firstApproval) {
+                        $firstApproval = $leaveApproval;
+                    }
                 }
+            }
+
+            if (!$firstApproval) {
+                throw new \Exception('Failed to create initial approval record');
             }
 
             // Set the current approval level to the first level
             $firstLevel = $approvalLevels->first();
             $leave->update([
                 'current_approval_level' => $firstLevel->name,
-                'current_approval_id' => $firstLevel->id
+                'current_approval_id' => $firstApproval->id
             ]);
 
             DB::commit();
@@ -205,12 +219,16 @@ class LeaveApplicationService
                
                     foreach ($approvers as $approver) {
                         if(!$leave->approvals()->where('level_id', $level->id)->where('user_id', $user->id)->where('approver_id', $approver->id)->exists()) {
-                            $leave->approvals()->create([
+                          $leaveApproval = $leave->approvals()->create([
                                 'user_id' => $user->id,
                                 'approver_id' => $approver->id,
                                 'status' => 'pending',
                                 'sequence' => $level->level,
                                 'level_id' => $level->id
+                            ]);
+
+                            $leaveApproval->update([
+                                'current_approval_id' => $leaveApproval->id
                             ]);
                         }
                 }
@@ -220,7 +238,6 @@ class LeaveApplicationService
             $firstLevel = $approvalLevels->first();
             $leave->update([
                 'current_approval_level' => $firstLevel->name,
-                'current_approval_id' => $firstLevel->id
             ]);
 
             DB::commit();
@@ -233,25 +250,82 @@ class LeaveApplicationService
         }
     }
 
-    public function approve(Leave $leave, User $approver): Leave
+    public function approve(Leave $leave, User $approver, ?string $comment = null): Leave
     {
-        $leave->update([
-            'status' => 'approved',
-            'current_approval_level' => 'completed',
-            'current_approval_id' => null,
-        ]);
+        try {
+            DB::beginTransaction();
 
-        // Create approval record
-        $leave->approvals()->create([
-            'user_id' => $approver->id,
-            'status' => 'approved',
-            'approved_at' => now(),
-        ]);
+            $leaveApproval = LeaveApproval::where('id', $leave->current_approval_id)
+                                           ->where('approver_id', $approver->id)
+                                           ->first();
+            
+            if (!$leaveApproval) {
+                throw new \Exception('Invalid approval record');
+            }
 
-        return $leave;
+            $currentLevel = ApprovalLevel::where('id', $leaveApproval->level_id)->first();
+            
+            if (!$currentLevel) {
+                throw new \Exception('Invalid approval level');
+            }
+
+            $nextLevel = $currentLevel->getNextLevel();
+
+            // Update current approval record
+            $leaveApproval->update([
+                'status' => 'approved',
+                'action_date' => now(),
+                'remark' => $comment
+            ]);
+
+            if (!$nextLevel) {
+                // This was the final approval level
+                $leave->update([
+                    'status' => 'approved',
+                    'current_approval_level' => 'approved',
+                    'current_approval_id' => null
+                ]);
+                
+                $leaveBalance = LeaveBalance::where('user_id', $leave->user_id)
+                    ->where('leave_type_id', $leave->leave_type_id)
+                    ->where('year', Carbon::parse($leave->start_date)->year)
+                    ->first();
+                    
+                if($leaveBalance) {
+                    $newDaysTaken = $leaveBalance->days_taken + $leave->working_days;
+                    $newDaysRemaining = $leaveBalance->days_remaining - $leave->working_days;
+                    
+                    $leaveBalance->update([
+                        'days_taken' => $newDaysTaken,
+                        'days_remaining' => $newDaysRemaining
+                    ]);
+                }
+            } else {
+                $nextApproval = LeaveApproval::where('leave_id', $leave->id)
+                    ->where('level_id', $nextLevel->id)
+                    ->first();
+                    
+                if (!$nextApproval) {
+                    throw new \Exception('Next approval level record not found');
+                }
+                
+                // Move to next approval level
+                $leave->update([
+                    'current_approval_level' => $nextLevel->level,
+                    'current_approval_id' => $nextApproval->id
+                ]);
+            }
+
+            DB::commit();
+            return $leave;
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 
-    public function reject(Leave $leave, User $rejector, string $reason): Leave
+    public function reject(Leave $leave, User $rejector, string $reason, ?string $comment = null): Leave
     {
         $leave->update([
             'status' => 'rejected',
@@ -265,6 +339,7 @@ class LeaveApplicationService
             'status' => 'rejected',
             'rejected_at' => now(),
             'rejection_reason' => $reason,
+            'remark' => $comment
         ]);
 
         return $leave;
@@ -288,12 +363,42 @@ class LeaveApplicationService
             ->get();
     }
 
-    public function getPendingLeaves(): Collection
+    public function getPendingLeaves(): LengthAwarePaginator
     {
+        $user = Auth::user();
+        
         return Leave::where('status', 'pending')
-            ->with(['user', 'leaveType', 'approvals.user'])
+            ->whereHas('approvals', function ($query) use ($user) {
+                $query->where('approver_id', $user->id)
+                    ->where('status', 'pending')
+                    ->where('sequence', function ($subQuery) {
+                        $subQuery->select('sequence')
+                            ->from('leave_approvals')
+                            ->whereColumn('leave_id', 'leaves.id')
+                            ->where('status', 'pending')
+                            ->orderBy('sequence')
+                            ->limit(1);
+                    });
+            })
+            ->with([
+                'user',
+                'leaveType',
+                'approvals' => function ($query) {
+                    $query->orderBy('sequence');
+                },
+                'approvals.approver',
+                'approvals.approvalLevel'
+            ])
+            ->withCount([
+                'approvals as approved_count' => function ($query) {
+                    $query->where('status', 'approved');
+                },
+                'approvals as rejected_count' => function ($query) {
+                    $query->where('status', 'rejected');
+                }
+            ])
             ->latest()
-            ->get();
+            ->paginate(10);
     }
 
     public function getLeaveTypes(): Collection

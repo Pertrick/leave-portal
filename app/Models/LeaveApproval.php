@@ -35,4 +35,14 @@ class LeaveApproval extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approver_id');
+    }
+
+    public function approvalLevel(): BelongsTo
+    {
+        return $this->belongsTo(ApprovalLevel::class, 'level_id');
+    }
 } 
