@@ -16,7 +16,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/leaves/{leave}', [LeaveController::class, 'show'])->name('leaves.show');
     Route::post('/leaves/draft/{leave?}', [LeaveController::class, 'saveDraft'])->name('leaves.draft');
     Route::get('/leaves/{leave}/edit', [LeaveController::class, 'edit'])->name('leaves.edit');
-    Route::put('/leaves/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
+    Route::put('/leaves/update/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
     Route::delete('/leaves/{leave}', [LeaveController::class, 'destroy'])->name('leaves.destroy');
 
 

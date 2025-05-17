@@ -8,7 +8,11 @@ import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
-import { ToastService } from '@/services/toast';
+import { getCurrentInstance } from 'vue';
+import { useFlash } from '@/composables/useFlash';
+
+const { flash } = useFlash()
+const { proxy } = getCurrentInstance()
 
 defineProps<{
     status?: string;
@@ -24,10 +28,10 @@ const form = useForm({
 const submit = () => {
     form.post(route('login'), {
         onSuccess: () => {
-            ToastService.success('Welcome back!');
+            proxy.$toast.success('Welcome back!');
         },
         onError: (errors) => {
-            ToastService.error('Login failed. Please check your credentials.');
+            proxy.$toast.error('Login failed. Please check your credentials.');
         },
     });
 };

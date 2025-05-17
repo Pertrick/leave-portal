@@ -130,7 +130,6 @@
                     v-model="form.reason"
                     class="mt-1 block w-full"
                     rows="4"
-                    required
                     placeholder="Please provide a detailed reason for your leave request..."
                   />
                   <InputError :message="form.errors.reason" class="mt-2" />
@@ -151,7 +150,7 @@
 
                 <!-- Replacement Staff -->
                 <div>
-                  <InputLabel for="replacement_staff_name" value="Replacement Staff Name (Optional)" />
+                  <InputLabel for="replacement_staff_name" value="Replacement Staff Name" />
                   <TextInput
                     id="replacement_staff_name"
                     v-model="form.replacement_staff_name"
@@ -162,7 +161,7 @@
                 </div>
 
                 <div>
-                  <InputLabel for="replacement_staff_phone" value="Replacement Staff Phone (Optional)" />
+                  <InputLabel for="replacement_staff_phone" value="Replacement Staff Phone" />
                   <TextInput
                     id="replacement_staff_phone"
                     v-model="form.replacement_staff_phone"
@@ -232,7 +231,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, getCurrentInstance } from 'vue'
 import { useForm, Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import InputLabel from '@/Components/InputLabel.vue'
@@ -242,8 +241,11 @@ import SelectInput from '@/Components/SelectInput.vue'
 import FileInput from '@/Components/FileInput.vue'
 import InputError from '@/Components/InputError.vue'
 import { ArrowLeftIcon, DocumentIcon } from '@heroicons/vue/24/outline/index.js'
-import { ToastService } from '@/services/toast';
 import { debounce } from 'lodash'
+import { useFlash } from '@/composables/useFlash'
+
+const { flash } = useFlash()
+const { proxy } = getCurrentInstance()
 
 const props = defineProps({
   leave: Object,
@@ -309,27 +311,27 @@ const submit = () => {
     return
   }
 
-  form.post(route('leaves.store', props.leave.id), {
-    onSuccess: () => {
-      ToastService.success('Leave application submitted successfully')
-    },
-    onError: () => {
-      ToastService.error('Failed to submit leave application')
-    },
+  if(form.status !== 'draft' && !form.replacement_staff_name)
+   {
+    form.errors.replacement_staff_name = 'Please provide a valid replacement name.'
+    return
+  }
+
+  if(form.status !== 'draft' &&  !form.replacement_staff_phone)
+   {
+    form.errors.replacement_staff_phone = 'Please provide a valid replacement phone number.'
+     return
+  }
+
+  form.put(route('leaves.update', props.leave.uuid), {
+    preserveScroll: true
   })
 }
 
 const saveAsDraft = () => {
   form.status = 'draft'
   form.post(route('leaves.draft', props.leave.uuid), {
-    preserveScroll: true,
-    onSuccess: () => {
-      ToastService.success('Draft updated successfully')
-      form.clearErrors()
-    },
-    onError: () => {
-      ToastService.error('Failed to updated draft')
-    },
+    preserveScroll: true
   })
 }
 
@@ -355,7 +357,7 @@ const calculateDuration = debounce((start, end, type) => {
     form.working_days = response.data.working_days
   })
   .catch(error => {
-    ToastService.error('Failed to calculate leave duration')
+    proxy.$toast.error(error.response?.data?.message || 'Failed to calculate leave duration')
     console.error(error)
   })
   .finally(() =>  {

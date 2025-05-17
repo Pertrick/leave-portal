@@ -187,16 +187,21 @@
 
     <!-- Delete Confirmation Modal -->
     <Modal :show="showDeleteModal" @close="closeDeleteModal">
-      <div class="p-6">
-        <h2 class="text-lg font-medium text-gray-900">
-          Are you sure you want to cancel this leave application?
-        </h2>
-        <p class="mt-1 text-sm text-gray-600">
-          This action cannot be undone.
-        </p>
-        <div class="mt-6 flex justify-end space-x-3">
-          <SecondaryButton @click="closeDeleteModal">Cancel</SecondaryButton>
-          <DangerButton @click="deleteLeave">Delete</DangerButton>
+      <div class="p-6 max-w-md mx-auto">
+        <div class="text-center">
+          <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <XCircleIcon class="h-6 w-6 text-red-600" />
+          </div>
+          <h2 class="text-lg font-medium text-gray-900">
+            Cancel Leave Application
+          </h2>
+          <p class="mt-2 text-sm text-gray-600">
+            Are you sure you want to cancel this leave application? This action cannot be undone.
+          </p>
+        </div>
+        <div class="mt-6 flex justify-center space-x-3">
+          <SecondaryButton @click="closeDeleteModal">No, Keep It</SecondaryButton>
+          <DangerButton @click="deleteLeave">Yes, Cancel It</DangerButton>
         </div>
       </div>
     </Modal>
@@ -204,14 +209,17 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, getCurrentInstance } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import Modal from '@/Components/Modal.vue'
 import SecondaryButton from '@/Components/SecondaryButton.vue'
 import DangerButton from '@/Components/DangerButton.vue'
-import { ToastService } from '@/services/toast'
 import { PlusIcon, ClockIcon, CheckCircleIcon, XCircleIcon, DocumentIcon } from '@heroicons/vue/24/outline/index.js'
+import { useFlash } from '@/composables/useFlash'
+
+const { flash } = useFlash()
+const { proxy } = getCurrentInstance()
 
 const props = defineProps({
   leaves: Array,
@@ -253,10 +261,6 @@ const deleteLeave = () => {
   router.delete(route('leaves.destroy', leaveToDelete.value.id), {
     onSuccess: () => {
       closeDeleteModal()
-      ToastService.success('Leave application cancelled successfully')
-    },
-    onError: () => {
-      ToastService.error('Failed to cancel leave application')
     }
   })
 }

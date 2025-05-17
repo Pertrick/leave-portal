@@ -8,6 +8,7 @@ import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
 import Toast from 'vue-toastification';
+import { ToastPlugin } from './plugins/toast';
 import 'vue-toastification/dist/index.css';
 
 // Extend ImportMeta interface for Vite...
@@ -38,6 +39,7 @@ createInertiaApp({
                 maxToasts: 3,
                 newestOnTop: true,
             })
+            .use(ToastPlugin)
             .mount(el);
     },
     progress: {

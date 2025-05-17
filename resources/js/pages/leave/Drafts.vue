@@ -150,14 +150,38 @@
         </div>
       </div>
     </div>
+
+    <!-- Delete Confirmation Modal -->
+    <Modal :show="showDeleteModal" @close="closeDeleteModal">
+      <div class="p-6 max-w-md mx-auto">
+        <div class="text-center">
+          <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <TrashIcon class="h-6 w-6 text-red-600" />
+          </div>
+          <h2 class="text-lg font-medium text-gray-900">
+            Delete Draft Application
+          </h2>
+          <p class="mt-2 text-sm text-gray-600">
+            Are you sure you want to delete this draft application? This action cannot be undone.
+          </p>
+        </div>
+        <div class="mt-6 flex justify-center space-x-3">
+          <SecondaryButton @click="closeDeleteModal">No, Keep It</SecondaryButton>
+          <DangerButton @click="confirmDelete">Yes, Delete It</DangerButton>
+        </div>
+      </div>
+    </Modal>
   </AppLayout>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, getCurrentInstance } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { ToastService } from '@/services/toast'
+import Modal from '@/Components/Modal.vue'
+import SecondaryButton from '@/Components/SecondaryButton.vue'
+import DangerButton from '@/Components/DangerButton.vue'
+import { useFlash } from '@/composables/useFlash'
 import {
   PlusIcon,
   DocumentIcon,
@@ -174,6 +198,12 @@ const props = defineProps({
   leaveTypes: Array,
 })
 
+const { flash } = useFlash()
+const { proxy } = getCurrentInstance()
+
+const showDeleteModal = ref(false)
+const draftToDelete = ref(null)
+
 const getLeaveTypeName = (leaveTypeId) => {
   const leaveType = props.leaveTypes.find(type => type.id === leaveTypeId)
   return leaveType ? leaveType.name : 'Unknown Leave Type'
@@ -185,16 +215,22 @@ const formatDate = (date) => {
 }
 
 const deleteDraft = (draft) => {
-  if (confirm('Are you sure you want to delete this draft?')) {
-    router.delete(route('leaves.destroy', draft.id), {
-      onSuccess: () => {
-        ToastService.success('Draft deleted successfully')
-      },
-      onError: () => {
-        ToastService.error('Failed to delete draft')
-      }
-    })
-  }
+  draftToDelete.value = draft
+  showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false
+  draftToDelete.value = null
+}
+
+const confirmDelete = () => {
+  router.delete(route('leaves.destroy', draftToDelete.value.id), {
+    preserveScroll: true,
+    onSuccess: () => {
+      closeDeleteModal()
+    }
+  })
 }
 </script>
 

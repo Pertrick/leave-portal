@@ -12,11 +12,9 @@
         <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
       </div>
 
-      <div class="mb-6 sm:mb-0 sm:flex sm:items-center">
-        <div class="mt-3 sm:mt-0 w-full">
-          <div class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full">
-            <slot></slot>
-          </div>
+      <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+        <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+          <slot></slot>
         </div>
       </div>
     </div>

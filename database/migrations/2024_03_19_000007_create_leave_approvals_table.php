@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('leave_approvals', function (Blueprint $table) {
             $table->id();
             $table->foreignId('leave_id')->constrained('leaves')->onDelete('cascade');
-            $table->foreignId('user_id')->constrained('leaves')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('approver_id')->constrained('users')->onDelete('cascade');
 
             $table->string('level_id'); //supervisor or hod

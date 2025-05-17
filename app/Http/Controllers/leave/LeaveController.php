@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Leave;
 
+use Exception;
 use Inertia\Inertia;
 use App\Models\Leave;
 use Inertia\Response;
@@ -46,20 +47,38 @@ class LeaveController extends Controller
     {
         $leaveTypes = $this->leaveService->getLeaveTypes();
         $leaveBalances = $this->leaveService->getLeaveBalances(Auth::user());
+        $pendingLeaves = $this->leaveService->getUserLeaves(Auth::user())
+            ->where('status', 'pending')
+            ->count();
 
         return Inertia::render('leave/Create', [
             'leaveTypes' => $leaveTypes,
             'leaveBalances' => $leaveBalances,
+            'pendingLeaves' => $pendingLeaves,
         ]);
     }
 
     public function store(StoreLeaveRequest $request)
     {
-        $validated = $request->validated();
-        $leave = $this->leaveService->create($validated, auth()->user());
+        try {
+            // Check for pending leaves
+            $pendingLeaves = $this->leaveService->getUserLeaves(auth()->user())
+                ->where('status', 'pending')
+                ->count();
 
-        return redirect()->route('leaves.index')
-            ->with('success', 'Leave application submitted successfully.');
+            if ($pendingLeaves > 0) {
+                return back()->with('error', 'You have pending leave requests. Please wait for approval before submitting new requests.');
+            }
+
+            $validated = $request->validated();
+            $leave = $this->leaveService->create($validated, auth()->user());
+
+            return redirect()->route('leaves.index')
+                ->with('success', 'Leave application submitted successfully.');
+        }
+        catch(Exception $ex) {
+            return back()->with('error', $ex->getMessage());
+        }
     }
 
     public function saveDraft(SaveDraftRequest $request, ?Leave $leave = null)
@@ -107,28 +126,33 @@ class LeaveController extends Controller
 
     public function update(Request $request, Leave $leave)
     {
-        abort_if(auth()->id() != $leave->user_id, 403, 'You are not authorized to update this leave application.');
+        try{
+            abort_if(auth()->id() != $leave->user_id, 403, 'You are not authorized to update this leave application.');
 
-        if (!$leave->isPending()) {
+            if (!$leave->isPending() && !$leave->isDraft() ) {
+                return redirect()->route('leaves.index')
+                    ->with('error', 'Only pending leave applications can be updated.');
+            }
+
+            $validated = $request->validate([
+                'leave_type_id' => 'required|exists:leave_types,id',
+                'start_date' => 'required|date|after_or_equal:today',
+                'end_date' => 'required|date|after_or_equal:start_date',
+                'reason' => 'required|string|min:10',
+                'applicant_comment' => 'nullable|string',
+                'replacement_staff_name' => 'nullable|string|max:255',
+                'replacement_staff_phone' => 'nullable|string|max:20',
+                'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            ]);
+
+            $this->leaveService->update($leave, $validated);
+
             return redirect()->route('leaves.index')
-                ->with('error', 'Only pending leave applications can be updated.');
+                ->with('success', 'Leave application updated successfully.');
         }
-
-        $validated = $request->validate([
-            'leave_type_id' => 'required|exists:leave_types,id',
-            'start_date' => 'required|date|after_or_equal:today',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'reason' => 'required|string|min:10',
-            'applicant_comment' => 'nullable|string',
-            'replacement_staff_name' => 'nullable|string|max:255',
-            'replacement_staff_phone' => 'nullable|string|max:20',
-            'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
-        ]);
-
-        $this->leaveService->update($leave, $validated);
-
-        return redirect()->route('leaves.index')
-            ->with('success', 'Leave application updated successfully.');
+        catch(Exception $ex){
+            return back()->with('error',$ex->getMessage());
+        }
     }
 
     public function destroy(Leave $leave)

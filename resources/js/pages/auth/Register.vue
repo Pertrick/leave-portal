@@ -6,9 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SearchSelect } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
-import { ToastService } from '@/services/toast';
-import { computed, watch } from 'vue';
+import { computed, watch, getCurrentInstance } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { useFlash } from '@/composables/useFlash';
+
+const { flash } = useFlash()
+const { proxy } = getCurrentInstance()
 
 const props = defineProps<{
     departments: Array<{ id: number; name: string }>;
@@ -190,17 +193,17 @@ const submit = () => {
                 form.setError(field as FormFields, message);
             }
         });
-        ToastService.error('Please correct the errors in the form.');
+        proxy.$toast.error('Please correct the errors in the form.');
         return;
     }
 
     form.post(route('register'), {
         onSuccess: () => {
-            ToastService.success('Staff Account Created Successfully!');
+            proxy.$toast.success('Staff Account Created Successfully!');
             form.reset();
         },
         onError: (errors) => {
-            ToastService.error('Registration failed. Please check the form for errors.');
+            proxy.$toast.error('Registration failed. Please check the form for errors.');
         },
     });
 };

@@ -4,6 +4,7 @@ import { computed, onMounted } from 'vue';
 import { type NavigationItem } from '@/types';
 import Sidebar from '@/components/Sidebar.vue';
 import Header from '@/components/Header.vue';
+import Alert from '@/Components/Alert.vue';
 
 const props = defineProps<{
     title?: string;
@@ -57,15 +58,18 @@ defineExpose({});
 </script>
 
 <template>
-    <div class="flex h-screen bg-background">
-        <Sidebar :navigation="navigation" />
-        
-        <div class="flex flex-1 flex-col overflow-hidden">
-            <Header :breadcrumbs="breadcrumbs" :title="currentTitle" />
+    <div>
+        <Alert />
+        <div class="flex h-screen bg-background">
+            <Sidebar :navigation="navigation" />
             
-            <main class="flex-1 overflow-y-auto p-4">
-                <slot />
-            </main>
+            <div class="flex flex-1 flex-col overflow-hidden">
+                <Header :breadcrumbs="breadcrumbs" :title="currentTitle" />
+                
+                <main class="flex-1 overflow-y-auto p-4">
+                    <slot />
+                </main>
+            </div>
         </div>
     </div>
 </template>

@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use App\Models\ApprovalLevel;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 
 class LeaveApplicationService
@@ -151,10 +152,85 @@ class LeaveApplicationService
 
     public function update(Leave $leave, array $data): Leave
     {
-        $data = $this->calculateDays($data);
-        
-        $leave->update($data);
-        return $leave;
+        $startDate = Carbon::parse($data['start_date']);
+        $endDate = Carbon::parse($data['end_date']);
+        $leaveType = LeaveType::findOrFail($data['leave_type_id']);
+        $user = Auth::user();
+
+        // Validate dates
+        $this->validateLeaveDates($startDate, $endDate, $user->location_id);
+
+        // Calculate calendar days (including holidays)
+        $calendarDays = $startDate->diffInDays($endDate) + 1;
+
+        // Calculate working days (excluding weekends and holidays)
+        $workingDays = $this->calculateWorkingDays($startDate, $endDate, $leaveType);
+
+        // Get holidays in the date range
+        $holidays = $this->getHolidaysBetween($startDate, $endDate);
+
+        try {
+            DB::beginTransaction();
+            // Update the leave record
+           $leave->update([
+                'user_id' => $user->id,
+                'leave_type_id' => $data['leave_type_id'],
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'reason' => $data['reason'],
+                'calendar_days' => $calendarDays,
+                'working_days' => $workingDays,
+                'status' => 'pending',
+                'location_id' => $user->location_id,
+                'holidays' => $holidays->pluck('name')->toArray()
+            ]);
+
+            // Get all active approval levels ordered by level
+            $approvalLevels = ApprovalLevel::where('is_active', true)
+                ->orderBy('level')
+                ->get();
+
+            if ($approvalLevels->isEmpty()) {
+                throw new \InvalidArgumentException('No approval levels found.');
+            }
+
+            // Create leave approval records for each level
+            foreach ($approvalLevels as $level) {
+                // Get approvers for this level
+                $approvers = $this->getApprovers($level);
+                
+                if ($approvers->isEmpty()) {
+                    throw new \InvalidArgumentException("No approvers found for level {$level->name}");
+                }
+               
+                    foreach ($approvers as $approver) {
+                        if(!$leave->approvals()->where('level_id', $level->id)->where('user_id', $user->id)->where('approver_id', $approver->id)->exists()) {
+                            $leave->approvals()->create([
+                                'user_id' => $user->id,
+                                'approver_id' => $approver->id,
+                                'status' => 'pending',
+                                'sequence' => $level->level,
+                                'level_id' => $level->id
+                            ]);
+                        }
+                }
+            }
+
+            // Set the current approval level to the first level
+            $firstLevel = $approvalLevels->first();
+            $leave->update([
+                'current_approval_level' => $firstLevel->name,
+                'current_approval_id' => $firstLevel->id
+            ]);
+
+            DB::commit();
+            return $leave;
+            
+        } catch(\Exception $e) {
+            DB::rollBack();
+            Log::info($e->getMessage());
+            throw $e;
+        }
     }
 
     public function approve(Leave $leave, User $approver): Leave
@@ -319,11 +395,11 @@ class LeaveApplicationService
                 $query->orWhere(function ($q) use ($date) {
                     $q->where('is_recurring', true)
                         ->where('recurrence_type', 'easter')
-                        ->whereRaw('date(?, ? || " days") = ?', [
-                            $this->calculateEasterSunday($date->year),
-                            'easter_offset',
+                        ->whereRaw('DATE_ADD(?, INTERVAL easter_offset DAY) = ?', [
+                            $this->calculateEasterSunday($date->year)->format('Y-m-d'),
                             $date->format('Y-m-d')
                         ]);
+                        
                 });
 
                 // Check custom rule holidays
