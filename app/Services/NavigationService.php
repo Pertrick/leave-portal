@@ -13,7 +13,11 @@ class NavigationService
             ->where(function ($query) use ($userRoles) {
                 // Filter based on roles or allow navigation if roles is null
                 $query->whereNull('roles')
-                    ->orWhereJsonContains('roles', $userRoles); // Ensure roles match
+                    ->orWhere(function ($q) use ($userRoles) {
+                        foreach ($userRoles as $role) {
+                            $q->orWhereJsonContains('roles', $role);
+                        }
+                    });
             })
             ->where('is_active', true) // Ensure the item is active
             ->orderBy('order') // Order the navigation items
@@ -21,7 +25,11 @@ class NavigationService
                 // Apply the same role filtering to the children
                 $query->where(function ($subQuery) use ($userRoles) {
                     $subQuery->whereNull('roles')
-                        ->orWhereJsonContains('roles', $userRoles);
+                        ->orWhere(function ($q) use ($userRoles) {
+                            foreach ($userRoles as $role) {
+                                $q->orWhereJsonContains('roles', $role);
+                            }
+                        });
                 })
                 ->where('is_active', true)
                 ->orderBy('order'); // Order child items

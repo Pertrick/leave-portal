@@ -18,6 +18,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/leaves/{leave}/edit', [LeaveController::class, 'edit'])->name('leaves.edit');
     Route::put('/leaves/update/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
     Route::delete('/leaves/{leave}', [LeaveController::class, 'destroy'])->name('leaves.destroy');
+    Route::patch('/leaves/{leave}', [LeaveController::class, 'cancel'])->name('leaves.cancel');
 
 
     // Leave Approvals

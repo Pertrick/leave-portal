@@ -38,4 +38,36 @@ class Department extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function heads()
+    {
+        return $this->hasMany(DepartmentHead::class);
+    }
+
+    public function supervisors()
+    {
+        return $this->hasMany(Supervisor::class);
+    }
+
+    public function activeHeads()
+    {
+        return $this->hasMany(DepartmentHead::class)
+            ->whereNull('end_date')
+            ->orderBy('is_acting', 'asc') // Regular heads first (is_acting = 0), then acting heads (is_acting = 1)
+            ->with('user');
+    }
+
+    public function regularHead()
+    {
+        return $this->hasOne(DepartmentHead::class)
+            ->where('is_acting', false)
+            ->whereNull('end_date');
+    }
+
+    public function actingHead()
+    {
+        return $this->hasOne(DepartmentHead::class)
+            ->where('is_acting', true)
+            ->whereNull('end_date');
+    }
 } 

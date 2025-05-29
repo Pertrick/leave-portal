@@ -14,9 +14,15 @@ import { type BreadcrumbItem, type SharedData, type User } from '@/types';
 interface Props {
     mustVerifyEmail: boolean;
     status?: string;
+    user: {
+        firstname: string;
+        lastname: string;
+        email: string;
+        email_verified_at: string | null;
+    };
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -25,12 +31,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const page = usePage<SharedData>();
-const user = page.props.auth.user as User;
-
 const form = useForm({
-    name: user.name,
-    email: user.email,
+    firstname: props.user.firstname,
+    lastname: props.user.lastname,
+    email: props.user.email,
 });
 
 const submit = () => {
@@ -50,9 +54,15 @@ const submit = () => {
 
                 <form @submit.prevent="submit" class="space-y-6">
                     <div class="grid gap-2">
-                        <Label for="name">Name</Label>
-                        <Input id="name" class="mt-1 block w-full" v-model="form.name" required autocomplete="name" placeholder="Full name" />
-                        <InputError class="mt-2" :message="form.errors.name" />
+                        <Label for="name">First Name</Label>
+                        <Input id="name" class="mt-1 block w-full" v-model="form.firstname" required autocomplete="name" placeholder="First name" />
+                        <InputError class="mt-2" :message="form.errors.firstname" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="name">Last Name</Label>
+                        <Input id="name" class="mt-1 block w-full" v-model="form.lastname" required autocomplete="name" placeholder="Last name" />
+                        <InputError class="mt-2" :message="form.errors.lastname" />
                     </div>
 
                     <div class="grid gap-2">
@@ -69,7 +79,7 @@ const submit = () => {
                         <InputError class="mt-2" :message="form.errors.email" />
                     </div>
 
-                    <div v-if="mustVerifyEmail && !user.email_verified_at">
+                    <div v-if="mustVerifyEmail && !props.user.email_verified_at">
                         <p class="-mt-4 text-sm text-muted-foreground">
                             Your email address is unverified.
                             <Link
@@ -100,9 +110,9 @@ const submit = () => {
                         </Transition>
                     </div>
                 </form>
-            </div>
 
-            <DeleteUser />
+                <DeleteUser />
+            </div>
         </SettingsLayout>
     </AppLayout>
 </template>

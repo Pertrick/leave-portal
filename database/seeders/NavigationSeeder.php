@@ -9,11 +9,13 @@ class NavigationSeeder extends Seeder
 {
     public function run(): void
     {
+        Navigation::truncate();
+
         // Dashboard
         $dashboard = Navigation::create([
             'path' => 'dashboard',
             'title' => 'Dashboard',
-            'roles' => ['Admin', 'Supervisor', 'HOD', 'HR', 'Employee'],
+            'roles' => ['admin', 'supervisor', 'hod', 'hr', 'employee'],
             'icon' => 'home',
             'order' => 1,
             'is_dropdown' => false
@@ -23,7 +25,7 @@ class NavigationSeeder extends Seeder
         $leave = Navigation::create([
             'path' => null,
             'title' => 'Leave Management',
-            'roles' => ['Admin', 'Supervisor', 'HOD', 'HR', 'Employee'],
+            'roles' => ['admin', 'supervisor', 'hod', 'hr', 'employee'],
             'icon' => 'calendar',
             'order' => 2,
             'is_dropdown' => true
@@ -34,7 +36,7 @@ class NavigationSeeder extends Seeder
             'path' => 'leaves',
             'title' => 'My Applications',
             'parent_id' => $leave->id,
-            'roles' => ['Admin', 'Supervisor', 'HOD', 'HR', 'Employee'],
+            'roles' => ['admin', 'supervisor', 'hod', 'hr', 'employee'],
             'icon' => 'document-text',
             'order' => 1,
             'is_dropdown' => false
@@ -44,7 +46,7 @@ class NavigationSeeder extends Seeder
             'path' => 'leaves/create',
             'title' => 'New Application',
             'parent_id' => $leave->id,
-            'roles' => ['Admin', 'Supervisor', 'HOD', 'HR', 'Employee'],
+            'roles' => ['admin', 'supervisor', 'hod', 'hr', 'employee'],
             'icon' => 'plus-circle',
             'order' => 2,
             'is_dropdown' => false
@@ -54,7 +56,7 @@ class NavigationSeeder extends Seeder
             'path' => 'leaves/drafts',
             'title' => 'Drafts',
             'parent_id' => $leave->id,
-            'roles' => ['Admin', 'Supervisor', 'HOD', 'HR', 'Employee'],
+            'roles' => ['admin', 'supervisor', 'hod', 'hr', 'employee'],
             'icon' => 'document-duplicate',
             'order' => 3,
             'is_dropdown' => false
@@ -64,7 +66,7 @@ class NavigationSeeder extends Seeder
             'path' => 'leave/approvals',
             'title' => 'Leave Approvals',
             'parent_id' => $leave->id,
-            'roles' => ['Admin', 'Supervisor', 'HOD', 'HR'],
+            'roles' => ['admin', 'supervisor', 'hod', 'hr'],
             'icon' => 'check-circle',
             'order' => 4,
             'is_dropdown' => false
@@ -74,7 +76,7 @@ class NavigationSeeder extends Seeder
             'path' => 'leave/types',
             'title' => 'Leave Types',
             'parent_id' => $leave->id,
-            'roles' => ['Admin', 'HR'],
+            'roles' => ['admin', 'hr'],
             'icon' => 'tag',
             'order' => 5,
             'is_dropdown' => false
@@ -84,7 +86,7 @@ class NavigationSeeder extends Seeder
             'path' => 'leave/balances',
             'title' => 'Leave Balances',
             'parent_id' => $leave->id,
-            'roles' => ['Admin', 'HR'],
+            'roles' => ['admin', 'hr'],
             'icon' => 'calculator',
             'order' => 6,
             'is_dropdown' => false
@@ -94,19 +96,18 @@ class NavigationSeeder extends Seeder
         $staff = Navigation::create([
             'path' => 'staff',
             'title' => 'Staff Management',
-            'roles' => ['Admin', 'Supervisor', 'HOD', 'HR', 'Employee'],
+            'roles' => ['admin','hr'],
             'icon' => 'users',
-            'is_dropdown' => false
+            'is_dropdown' => true
         ]);
 
         // Staff Sub-items
         Navigation::create([
-            'path' => 'list',
+            'path' => 'staff',
             'title' => 'Staff List',
             'parent_id' => $staff->id,
-            'roles' => ['Admin', 'HR'],
+            'roles' => ['admin', 'hr'],
             'icon' => 'list',
-            
             'is_dropdown' => false
         ]);
 
@@ -114,30 +115,40 @@ class NavigationSeeder extends Seeder
             'path' => 'register',
             'title' => 'Register Staff',
             'parent_id' => $staff->id,
-            'roles' => ['Admin', 'HR'],
+            'roles' => ['admin', 'hr'],
             'icon' => 'user-plus',
             'order' => 2,
             'is_dropdown' => false
         ]);
 
-        // Departments
         Navigation::create([
-            'path' => 'departments',
-            'title' => 'Departments',
-            'roles' => ['Admin', 'Supervisor', 'HOD', 'HR', 'Employee'],
-            'icon' => 'building',
-            'order' => 4,
+            'path' => 'admin/departments/relationships',
+            'title' => 'Assign Supervisors/HODs',
+            'parent_id' => $staff->id,
+            'roles' => ['admin', 'hr'],
+            'icon' => 'users',
+            'order' => 3,
             'is_dropdown' => false
         ]);
+
+        // Departments
+        // Navigation::create([
+        //     'path' => 'departments',
+        //     'title' => 'Departments',
+        //     'roles' => ['Admin', 'Supervisor', 'HOD', 'HR', 'Employee'],
+        //     'icon' => 'building',
+        //     'order' => 4,
+        //     'is_dropdown' => false
+        // ]);
 
         // Reports
         $reports = Navigation::create([
             'path' => 'reports',
             'title' => 'Reports',
-            'roles' => ['Admin', 'Supervisor', 'HOD', 'HR'],
+            'roles' => ['admin', 'supervisor', 'hod', 'hr'],
             'icon' => 'bar-chart',
             'order' => 5,
-            'is_dropdown' => false
+            'is_dropdown' => true
         ]);
 
         // Reports Sub-items
@@ -145,7 +156,7 @@ class NavigationSeeder extends Seeder
             'path' => 'leave',
             'title' => 'Leave Reports',
             'parent_id' => $reports->id,
-            'roles' => ['Admin', 'Supervisor', 'HOD', 'HR', 'Employee'],
+            'roles' => ['admin', 'supervisor', 'hod', 'hr'],
             'icon' => 'calendar',
             'order' => 1,
             'is_dropdown' => false
@@ -155,7 +166,7 @@ class NavigationSeeder extends Seeder
             'path' => 'staff',
             'title' => 'Staff Reports',
             'parent_id' => $reports->id,
-            'roles' => ['Admin', 'Supervisor', 'HOD', 'HR'],
+            'roles' => ['admin', 'supervisor', 'hod', 'hr'],
             'icon' => 'users',
             'order' => 2,
             'is_dropdown' => false
@@ -165,7 +176,7 @@ class NavigationSeeder extends Seeder
         Navigation::create([
             'path' => 'settings',
             'title' => 'Settings',
-            'roles' => ['Admin', 'Supervisor', 'HOD', 'HR', 'Employee'],
+            'roles' => ['admin', 'supervisor', 'hod', 'hr'],
             'icon' => 'settings',
             'order' => 6,
             'is_dropdown' => false
@@ -175,7 +186,7 @@ class NavigationSeeder extends Seeder
         Navigation::create([
             'path' => 'profile',
             'title' => 'Profile',
-            'roles' => ['Admin', 'Supervisor', 'HOD', 'HR', 'Employee'],
+            'roles' => ['admin', 'supervisor', 'hod', 'hr'],
             'icon' => 'user',
             'order' => 7,
             'is_dropdown' => false
@@ -185,7 +196,7 @@ class NavigationSeeder extends Seeder
         Navigation::create([
             'path' => 'leave-entitlements',
             'title' => 'Leave Entitlements',
-            'roles' => ['Admin'],
+            'roles' => ['admin'],
             'icon' => 'calendar',
             'parent_id' => $leave->id,
             'order' => 7,
@@ -195,21 +206,21 @@ class NavigationSeeder extends Seeder
         Navigation::create([
             'path' => 'admin/holidays',
             'title' => 'Holiday Management',
-            'roles' => ['Admin'],
+            'roles' => ['admin'],
             'icon' => 'calendar-days',
             'parent_id' => $leave->id,
             'order' => 8,
             'is_dropdown' => false,
         ]);
 
-        Navigation::create([
-            'path' => 'leave-applications',
-            'title' => 'Leave Applications',
-            'roles' => ['Admin'],
-            'icon' => 'clipboard-document-list',
-            'parent_id' => $leave->id,
-            'order' => 9,
-            'is_dropdown' => false,
-        ]);
+        // Navigation::create([
+        //     'path' => 'leave-applications',
+        //     'title' => 'Leave Applications',
+        //     'roles' => ['Admin'],
+        //     'icon' => 'clipboard-document-list',
+        //     'parent_id' => $leave->id,
+        //     'order' => 9,
+        //     'is_dropdown' => false,
+        // ]);
     }
 } 

@@ -217,7 +217,7 @@ const closeDeleteModal = () => {
 }
 
 const confirmDelete = () => {
-  router.delete(route('leaves.destroy', draftToDelete.value.id), {
+  router.delete(route('leaves.destroy', draftToDelete.value.uuid), {
     preserveScroll: true,
     onSuccess: () => {
       closeDeleteModal()

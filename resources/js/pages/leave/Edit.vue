@@ -184,6 +184,13 @@
                         <DocumentIcon class="w-4 h-4 mr-1" />
                         Current Document
                       </a>
+                      <button
+                        type="button"
+                        @click="removeAttachment"
+                        class="ml-4 text-sm text-red-600 hover:text-red-900"
+                      >
+                        Remove
+                      </button>
                     </div>
                     <FileInput
                       id="attachment"
@@ -260,6 +267,8 @@ const props = defineProps({
 
 const durationLoading = ref(false)
 
+console.log(props.leave)
+
 const form = useForm({
   leave_type_id: props.leave.leave_type_id,
   start_date: props.leave.start_date,
@@ -269,10 +278,10 @@ const form = useForm({
   replacement_staff_name: props.leave.replacement_staff_name || '',
   replacement_staff_phone: props.leave.replacement_staff_phone || '',
   attachment: null,
+  current_attachment: props.leave.attachment,
   status: props.status,
   calendar_days: props.leave.calendar_days || 0,
   working_days: props.leave.working_days || 0
-
 })
 
 const minDate = new Date().toISOString().split('T')[0]
@@ -298,9 +307,14 @@ const selectedLeaveType = computed(() => {
   return props.leaveTypes.find(type => type.id === parseInt(form.leave_type_id))
 })
 
+const removeAttachment = () => {
+  form.current_attachment = null
+  form.attachment = null
+}
+
 const submit = () => {
   // Validate attachment for medical leave types
-  if (selectedLeaveType.value?.requires_medical_proof && !form.attachment && !props.leave.attachment) {
+  if (selectedLeaveType.value?.requires_medical_proof && !form.attachment && !form.current_attachment) {
     form.errors.attachment = 'Medical proof is required for this leave type.'
     return
   }
@@ -311,27 +325,58 @@ const submit = () => {
     return
   }
 
-  if(form.status !== 'draft' && !form.replacement_staff_name)
-   {
+  if(form.status !== 'draft' && !form.replacement_staff_name) {
     form.errors.replacement_staff_name = 'Please provide a valid replacement name.'
     return
   }
 
-  if(form.status !== 'draft' &&  !form.replacement_staff_phone)
-   {
+  if(form.status !== 'draft' && !form.replacement_staff_phone) {
     form.errors.replacement_staff_phone = 'Please provide a valid replacement phone number.'
-     return
+    return
+  }
+
+  // If no new attachment is uploaded, keep the current one
+  if (!form.attachment) {
+    form.attachment = form.current_attachment
   }
 
   form.put(route('leaves.update', props.leave.uuid), {
-    preserveScroll: true
+    preserveScroll: true,
+    onSuccess: () => {
+      if (flash.value?.success) {
+        proxy.$toast.success(flash.value.success)
+      }
+      router.visit(route('leaves.index'))
+    },
+    onError: (errors) => {
+      if (flash.value?.error) {
+        proxy.$toast.error(flash.value.error)
+      }
+    }
   })
 }
 
 const saveAsDraft = () => {
   form.status = 'draft'
+  
+  // If no new attachment is uploaded, keep the current one
+  if (!form.attachment) {
+    form.attachment = form.current_attachment
+  }
+
   form.post(route('leaves.draft', props.leave.uuid), {
-    preserveScroll: true
+    preserveScroll: true,
+    onSuccess: () => {
+      if (flash.value?.success) {
+        proxy.$toast.success(flash.value.success)
+      }
+      router.visit(route('leaves.drafts'))
+    },
+    onError: (errors) => {
+      if (flash.value?.error) {
+        proxy.$toast.error(flash.value.error)
+      }
+    }
   })
 }
 

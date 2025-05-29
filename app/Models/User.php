@@ -128,5 +128,96 @@ class User extends Authenticatable
     {
         return $this->settings ?? $this->settings()->create(UserSetting::getDefaults());
     }
-    
+
+
+    /**
+     * Check if user can manage supervisors
+     */
+    public function canManageSupervisors(): bool
+    {
+        return $this->hasRole('supervisor') || $this->hasRole('admin');
+    }
+
+    /**
+     * Check if user can manage department heads
+     */
+    public function canManageDepartmentHeads(): bool
+    {
+        return $this->hasRole('hod') || $this->hasRole('admin');
+    }
+
+    /**
+     * Check if user can manage departments
+     */
+    public function canManageDepartments(): bool
+    {
+        return $this->hasRole('department-manager') || $this->hasRole('admin');
+    }
+
+    /**
+     * Check if user can manage users
+     */
+    public function canManageUsers(): bool
+    {
+        return $this->hasRole('user-manager') || $this->hasRole('admin');
+    }
+
+    /**
+     * Check if user can manage leave
+     */
+    public function canManageLeave(): bool
+    {
+        return $this->hasRole('leave-manager') || $this->hasRole('admin');
+    }
+
+    /**
+     * Check if user can view reports
+     */
+    public function canViewReports(): bool
+    {
+        return $this->hasRole('report-viewer') || $this->hasRole('admin');
+    }
+
+    /**
+     * Check if user can manage settings
+     */
+    public function canManageSettings(): bool
+    {
+        return $this->hasRole('settings-manager') || $this->hasRole('admin');
+    }
+
+    public function supervisors()
+    {
+        return $this->hasMany(Supervisor::class, 'user_id');
+    }
+
+    public function activeSupervisors()
+    {
+        return $this->supervisors()->where('is_active', true);
+    }
+
+    public function primarySupervisor()
+    {
+        return $this->activeSupervisors()->where('is_primary', true)->first();
+    }
+
+    public function supervisedUsers()
+    {
+        return $this->hasMany(Supervisor::class, 'supervisor_id');
+    }
+
+    public function activeSupervisedUsers()
+    {
+        return $this->supervisedUsers()->where('is_active', true);
+    }
+
+    public function departmentHead()
+    {
+        return $this->hasOne(DepartmentHead::class)->where('is_acting', false);
+    }
+
+    public function actingDepartmentHead()
+    {
+        return $this->hasOne(DepartmentHead::class)->where('is_acting', true);
+    }
 }

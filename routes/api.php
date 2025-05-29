@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\HolidayController;
+use App\Http\Controllers\API\SupervisorController;
 use Carbon\Carbon;
 use App\Models\Holiday;
 
@@ -19,22 +20,25 @@ use App\Models\Holiday;
 */
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/holidays', function (Request $request) {
-        $startDate = Carbon::parse($request->start_date);
-        $endDate = Carbon::parse($request->end_date);
-        $locationId = auth()->user()->location_id;
-
-        $holidays = Holiday::whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-            ->where('is_active', true)
-            ->where(function ($query) use ($locationId) {
-                $query->where('location_id', $locationId)
-                    ->orWhereNull('location_id');
-            })
-            ->get(['name', 'date', 'type']);
-
-        return response()->json($holidays);
-    });
 });
+
+Route::get('/holidays', function (Request $request) {
+    $startDate = Carbon::parse($request->start_date);
+    $endDate = Carbon::parse($request->end_date);
+    $locationId = auth()->user()->location_id;
+
+    $holidays = Holiday::whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+        ->where('is_active', true)
+        ->where(function ($query) use ($locationId) {
+            $query->where('location_id', $locationId)
+                ->orWhereNull('location_id');
+        })
+        ->get(['name', 'date', 'type']);
+
+    return response()->json($holidays);
+});
+
+Route::get('/supervisors/{supervisor}/users', [SupervisorController::class, 'getSupervisedUsers']);
 
 Route::middleware([
     'auth:sanctum',

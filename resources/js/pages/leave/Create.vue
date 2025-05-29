@@ -258,7 +258,7 @@ const form = useForm({
   start_date: '',
   end_date: '',
   reason: '',
-  medical_proof: null,
+  attachment: null,
   status: 'draft',
   calendar_days: 0,
   working_days: 0,

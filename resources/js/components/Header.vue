@@ -42,7 +42,10 @@ defineExpose({});
 <template>
     <header class="border-b border-sidebar-border/70 bg-background">
         <div class="flex h-16 items-center justify-between px-4">
-            <h1 class="text-xl font-semibold">{{ title }}</h1>
+            <div class="flex items-center gap-4">
+                <h1 class="text-xl font-semibold">{{ title }}</h1>
+                <slot name="actions" />
+            </div>
             <div class="flex items-center gap-4">
                 <!-- User Profile Dropdown -->
                 <div class="relative" v-click-outside="closeUserMenu">

@@ -17,9 +17,25 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Pagination\LengthAwarePaginator;
+use App\Services\FileUploadService;
+use Illuminate\Http\UploadedFile;
 
 class LeaveApplicationService
 {
+    protected $fileUploadService;
+
+    public function __construct(FileUploadService $fileUploadService)
+    {
+        $this->fileUploadService = $fileUploadService;
+    }
+
+    /**
+     * Create a new leave application
+     *
+     * @param array $data
+     * @param User $user
+     * @return Leave
+     */
     public function create(array $data, User $user): Leave
     {
         $startDate = Carbon::parse($data['start_date']);
@@ -38,8 +54,16 @@ class LeaveApplicationService
         // Get holidays in the date range
         $holidays = $this->getHolidaysBetween($startDate, $endDate);
 
+
         try {
             DB::beginTransaction();
+
+            if (isset($data['attachment']) && $data['attachment'] instanceof UploadedFile) {
+                $data['attachment'] = $this->fileUploadService->upload(
+                    $data['attachment'],
+                    'leave-attachments'
+                );
+            }
             
             // Create the leave record
             $leave = $user->leaves()->create([
@@ -52,7 +76,8 @@ class LeaveApplicationService
                 'working_days' => $workingDays,
                 'status' => 'pending',
                 'location_id' => $user->location_id,
-                'holidays' => $holidays->pluck('name')->toArray()
+                'holidays' => $holidays->pluck('name')->toArray(),
+                'attachment' => $data['attachment'] ?? null
             ]);
 
             // Get all active approval levels ordered by level
@@ -110,6 +135,130 @@ class LeaveApplicationService
             DB::rollBack();
             throw $e;
         }
+    
+    }
+
+    /**
+     * Update a leave application
+     *
+     * @param Leave $leave
+     * @param array $data
+     * @return Leave
+     */
+    public function update(Leave $leave, array $data): Leave
+    {
+
+        $startDate = Carbon::parse($data['start_date']);
+        $endDate = Carbon::parse($data['end_date']);
+        $leaveType = LeaveType::findOrFail($data['leave_type_id']);
+        $user = Auth::user();
+
+        // Validate dates
+        $this->validateLeaveDates($startDate, $endDate, $user->location_id);
+
+        // Calculate calendar days (including holidays)
+        $calendarDays = $startDate->diffInDays($endDate) + 1;
+
+        // Calculate working days (excluding weekends and holidays)
+        $workingDays = $this->calculateWorkingDays($startDate, $endDate, $leaveType);
+
+        // Get holidays in the date range
+        $holidays = $this->getHolidaysBetween($startDate, $endDate);
+
+        try {
+            DB::beginTransaction();
+            // Update the leave record
+
+              // Handle file upload if present
+        if (isset($data['attachment']) && $data['attachment'] instanceof UploadedFile) {
+            // Delete old file if exists
+            if ($leave->attachment) {
+                $this->fileUploadService->delete($leave->attachment);
+            }
+            
+            $data['attachment'] = $this->fileUploadService->upload(
+                $data['attachment'],
+                'leave-attachments'
+            );
+        }
+           $leave->update([
+                'user_id' => $user->id,
+                'leave_type_id' => $data['leave_type_id'],
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'reason' => $data['reason'],
+                'calendar_days' => $calendarDays,
+                'working_days' => $workingDays,
+                'status' => 'pending',
+                'location_id' => $user->location_id,
+                'holidays' => $holidays->pluck('name')->toArray(),
+                'attachment' => $data['attachment'] ?? null
+            ]);
+
+            // Get all active approval levels ordered by level
+            $approvalLevels = ApprovalLevel::where('is_active', true)
+                ->orderBy('level')
+                ->get();
+
+            if ($approvalLevels->isEmpty()) {
+                throw new \InvalidArgumentException('No approval levels found.');
+            }
+
+            // Create leave approval records for each level
+            foreach ($approvalLevels as $level) {
+                // Get approvers for this level
+                $approvers = $this->getApprovers($level);
+                
+                if ($approvers->isEmpty()) {
+                    throw new \InvalidArgumentException("No approvers found for level {$level->name}");
+                }
+
+                foreach ($approvers as $approver) {
+                        if(!$leave->approvals()->where('level_id', $level->id)->where('user_id', $user->id)->where('approver_id', $approver->id)->exists()) {
+                          $leaveApproval = $leave->approvals()->create([
+                        'user_id' => $user->id,
+                        'approver_id' => $approver->id,
+                        'status' => 'pending',
+                        'sequence' => $level->level,
+                        'level_id' => $level->id
+                    ]);
+
+                            $leaveApproval->update([
+                                'current_approval_id' => $leaveApproval->id
+                            ]);
+                        }
+                }
+            }
+
+            // Set the current approval level to the first level
+            $firstLevel = $approvalLevels->first();
+            $leave->update([
+                'current_approval_level' => $firstLevel->name,
+            ]);
+
+            DB::commit();
+            return $leave;
+            
+        } catch(\Exception $e) {
+            DB::rollBack();
+            Log::info($e->getMessage());
+            throw $e;
+        }
+      
+    }
+
+    /**
+     * Get leave with formatted attachment URL
+     *
+     * @param Leave $leave
+     * @return Leave
+     */
+    public function getLeaveWithFormattedAttachment(Leave $leave): Leave
+    {
+        if ($leave->attachment) {
+            $leave->attachment = $this->fileUploadService->getUrl($leave->attachment);
+        }
+        return $leave;
     }
 
     /**
@@ -150,102 +299,38 @@ class LeaveApplicationService
     public function createOrUpdateDraft(array $data, User $user, ?Leave $leave = null): Leave
     {
         $data = $this->calculateDays($data);
-        if ($leave && $leave->isDraft()) {
-            $leave->update($data);
-        } else {
-            $leave = $user->leaves()->create($data);
-        }
-        // Optionally handle file upload if needed:
-        if (isset($data['attachment'])) {
-            $path = $data['attachment']->store('attachments', 'public');
-            $leave->update(['attachment_path' => $path]);
-        }
-
-        return $leave;
-    }
-
-    public function update(Leave $leave, array $data): Leave
-    {
-        $startDate = Carbon::parse($data['start_date']);
-        $endDate = Carbon::parse($data['end_date']);
-        $leaveType = LeaveType::findOrFail($data['leave_type_id']);
-        $user = Auth::user();
-
-        // Validate dates
-        $this->validateLeaveDates($startDate, $endDate, $user->location_id);
-
-        // Calculate calendar days (including holidays)
-        $calendarDays = $startDate->diffInDays($endDate) + 1;
-
-        // Calculate working days (excluding weekends and holidays)
-        $workingDays = $this->calculateWorkingDays($startDate, $endDate, $leaveType);
-
-        // Get holidays in the date range
-        $holidays = $this->getHolidaysBetween($startDate, $endDate);
 
         try {
             DB::beginTransaction();
-            // Update the leave record
-           $leave->update([
-                'user_id' => $user->id,
-                'leave_type_id' => $data['leave_type_id'],
-                'start_date' => $startDate,
-                'end_date' => $endDate,
-                'reason' => $data['reason'],
-                'calendar_days' => $calendarDays,
-                'working_days' => $workingDays,
-                'status' => 'pending',
-                'location_id' => $user->location_id,
-                'holidays' => $holidays->pluck('name')->toArray()
-            ]);
-
-            // Get all active approval levels ordered by level
-            $approvalLevels = ApprovalLevel::where('is_active', true)
-                ->orderBy('level')
-                ->get();
-
-            if ($approvalLevels->isEmpty()) {
-                throw new \InvalidArgumentException('No approval levels found.');
-            }
-
-            // Create leave approval records for each level
-            foreach ($approvalLevels as $level) {
-                // Get approvers for this level
-                $approvers = $this->getApprovers($level);
+            
+            // Handle file upload if present
+            if (isset($data['attachment']) && $data['attachment'] instanceof \Illuminate\Http\UploadedFile) {
+                $fileUploadService = app(FileUploadService::class);
                 
-                if ($approvers->isEmpty()) {
-                    throw new \InvalidArgumentException("No approvers found for level {$level->name}");
+                // Validate file using default allowed types
+                if (!$fileUploadService->validate($data['attachment'])) {
+                    throw new \InvalidArgumentException('Invalid file type or size. Allowed types: ' . implode(', ', $fileUploadService->getAllowedExtensions()));
                 }
-               
-                    foreach ($approvers as $approver) {
-                        if(!$leave->approvals()->where('level_id', $level->id)->where('user_id', $user->id)->where('approver_id', $approver->id)->exists()) {
-                          $leaveApproval = $leave->approvals()->create([
-                                'user_id' => $user->id,
-                                'approver_id' => $approver->id,
-                                'status' => 'pending',
-                                'sequence' => $level->level,
-                                'level_id' => $level->id
-                            ]);
-
-                            $leaveApproval->update([
-                                'current_approval_id' => $leaveApproval->id
-                            ]);
-                        }
+                
+                // Delete old attachment if exists
+                if ($leave && $leave->attachment) {
+                    $fileUploadService->delete($leave->attachment);
                 }
+                
+                $data['attachment'] = $fileUploadService->upload($data['attachment'], 'leave-attachments');
             }
-
-            // Set the current approval level to the first level
-            $firstLevel = $approvalLevels->first();
-            $leave->update([
-                'current_approval_level' => $firstLevel->name,
-            ]);
+            
+            if ($leave && $leave->isDraft()) {
+                $leave->update($data);
+            } else {
+                $leave = $user->leaves()->create($data);
+            }
 
             DB::commit();
             return $leave;
             
         } catch(\Exception $e) {
             DB::rollBack();
-            Log::info($e->getMessage());
             throw $e;
         }
     }
@@ -280,8 +365,8 @@ class LeaveApplicationService
 
             if (!$nextLevel) {
                 // This was the final approval level
-                $leave->update([
-                    'status' => 'approved',
+        $leave->update([
+            'status' => 'approved',
                     'current_approval_level' => 'approved',
                     'current_approval_id' => null
                 ]);
@@ -317,7 +402,7 @@ class LeaveApplicationService
             }
 
             DB::commit();
-            return $leave;
+        return $leave;
 
         } catch (\Exception $e) {
             DB::rollBack();

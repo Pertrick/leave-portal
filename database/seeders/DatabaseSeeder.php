@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
         // ]);
 
         $this->call([
+            RolePermissionSeeder::class,
             LeaveSettingsSeeder::class,
             LocationSeeder::class,
             DepartmentSeeder::class,
@@ -36,11 +37,11 @@ class DatabaseSeeder extends Seeder
             HolidaySeeder::class,
             LeaveEntitlementSeeder::class,
             ApprovalLevelSeeder::class,
-            RoleSeeder::class,
+            // RoleSeeder::class,
             AdminUserSeeder::class,
             NavigationSeeder::class,
             LeaveBalanceSeeder::class,
-            ApproverSeeder::class,
+            RelationshipSeeder::class,
         ]);
     }
 }

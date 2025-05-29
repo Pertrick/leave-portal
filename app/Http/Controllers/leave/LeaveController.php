@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use App\Services\LeaveApplicationService;
 use App\Http\Requests\Leave\SaveDraftRequest;
 use App\Http\Requests\Leave\StoreLeaveRequest;
+use Inertia\RedirectResponse as InertiaRedirectResponse;
 
 class LeaveController extends Controller
 {
@@ -23,7 +24,7 @@ class LeaveController extends Controller
 
     public function index(): Response
     {
-        $leaves = $this->leaveService->getUserLeaves(auth()->user());
+        $leaves = $this->leaveService->getUserLeaves(Auth::guard('web')->user());
         $leaveTypes = $this->leaveService->getLeaveTypes();
 
         return Inertia::render('leave/Index', [
@@ -34,7 +35,7 @@ class LeaveController extends Controller
 
     public function drafts(): Response
     {
-        $drafts = $this->leaveService->getUserDrafts(auth()->user());
+        $drafts = $this->leaveService->getUserDrafts(Auth::guard('web')->user());
         $leaveTypes = $this->leaveService->getLeaveTypes();
 
         return Inertia::render('leave/Drafts', [
@@ -58,11 +59,12 @@ class LeaveController extends Controller
         ]);
     }
 
-    public function store(StoreLeaveRequest $request)
+    public function store(StoreLeaveRequest $request): RedirectResponse
     {
         try {
+            $user = Auth::guard('web')->user();
             // Check for pending leaves
-            $pendingLeaves = $this->leaveService->getUserLeaves(auth()->user())
+            $pendingLeaves = $this->leaveService->getUserLeaves($user)
                 ->where('status', 'pending')
                 ->count();
 
@@ -71,7 +73,7 @@ class LeaveController extends Controller
             }
 
             $validated = $request->validated();
-            $leave = $this->leaveService->create($validated, auth()->user());
+            $leave = $this->leaveService->create($validated, $user);
 
             return redirect()->route('leaves.index')
                 ->with('success', 'Leave application submitted successfully.');
@@ -81,15 +83,16 @@ class LeaveController extends Controller
         }
     }
 
-    public function saveDraft(SaveDraftRequest $request, ?Leave $leave = null)
+    public function saveDraft(SaveDraftRequest $request, ?Leave $leave = null): RedirectResponse
     {
-        $userDrafts = $this->leaveService->getUserDrafts(auth()->user());
+        $user = Auth::guard('web')->user();
+        $userDrafts = $this->leaveService->getUserDrafts($user);
         if (config('leave.max_draft_leave_per_user') && $userDrafts->count() >= config('leave.max_draft_leave_per_user')) {
             return back()->with('error', 'You have reached the maximum number of draft leave applications.');
         }
 
         $validated = $request->validated();
-        $leave = $this->leaveService->createOrUpdateDraft($validated, auth()->user(), $leave);
+        $leave = $this->leaveService->createOrUpdateDraft($validated, $user, $leave);
     
         return redirect()->route('leaves.drafts')
             ->with('success', 'Leave draft saved successfully.');
@@ -99,6 +102,7 @@ class LeaveController extends Controller
     public function show(Leave $leave): Response
     {
         $leave->load(['leaveType', 'approvals.user', 'user']);
+        $leave = $this->leaveService->getLeaveWithFormattedAttachment($leave);
 
         return Inertia::render('leave/Show', [
             'leave' => $leave,
@@ -107,7 +111,7 @@ class LeaveController extends Controller
 
     public function edit(Leave $leave): Response|RedirectResponse
     {
-        abort_if(auth()->id() != $leave->user_id, 403, 'You are not authorized to edit this leave application.');
+        abort_if(Auth::guard('web')->id() != $leave->user_id, 403, 'You are not authorized to edit this leave application.');
 
         if (!$leave->isPending() && !$leave->isDraft()) {
             return redirect()->route('leaves.index')
@@ -115,7 +119,8 @@ class LeaveController extends Controller
         }
 
         $leaveTypes = $this->leaveService->getLeaveTypes();
-        $leaveBalances = $this->leaveService->getLeaveBalances(Auth::user());
+        $leaveBalances = $this->leaveService->getLeaveBalances(Auth::guard('web')->user());
+        $leave = $this->leaveService->getLeaveWithFormattedAttachment($leave);
         
         return Inertia::render('leave/Edit', [
             'leave' => $leave,
@@ -124,40 +129,31 @@ class LeaveController extends Controller
         ]);
     }
 
-    public function update(Request $request, Leave $leave)
+    public function update(StoreLeaveRequest $request, Leave $leave): RedirectResponse
     {
-        try{
-            abort_if(auth()->id() != $leave->user_id, 403, 'You are not authorized to update this leave application.');
+        try {
+            $user = Auth::guard('web')->user();
+            abort_if($user->id != $leave->user_id, 403, 'You are not authorized to update this leave application.');
 
-            if (!$leave->isPending() && !$leave->isDraft() ) {
+            if (!$leave->isPending() && !$leave->isDraft()) {
                 return redirect()->route('leaves.index')
                     ->with('error', 'Only pending leave applications can be updated.');
             }
 
-            $validated = $request->validate([
-                'leave_type_id' => 'required|exists:leave_types,id',
-                'start_date' => 'required|date|after_or_equal:today',
-                'end_date' => 'required|date|after_or_equal:start_date',
-                'reason' => 'required|string|min:10',
-                'applicant_comment' => 'nullable|string',
-                'replacement_staff_name' => 'nullable|string|max:255',
-                'replacement_staff_phone' => 'nullable|string|max:20',
-                'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
-            ]);
-
-            $this->leaveService->update($leave, $validated);
+            $this->leaveService->update($leave, $request->validated());
 
             return redirect()->route('leaves.index')
                 ->with('success', 'Leave application updated successfully.');
         }
-        catch(Exception $ex){
-            return back()->with('error',$ex->getMessage());
+        catch(Exception $ex) {
+            return back()->with('error', $ex->getMessage());
         }
     }
 
-    public function destroy(Leave $leave)
+    public function destroy(Leave $leave): RedirectResponse
     {
-        abort_if(auth()->id() != $leave->user_id, 403, 'You are not authorized to delete this leave application.');
+        $user = Auth::guard('web')->user();
+        abort_if($user->getAuthIdentifier() != $leave->user_id, 403, 'You are not authorized to delete this leave application.');
         
         if (!$leave->isPending() && !$leave->isDraft()) {
             return redirect()->route('leaves.index')
@@ -165,6 +161,23 @@ class LeaveController extends Controller
         }
 
         $leave->delete();
+
+        return redirect()->route('leaves.index')
+            ->with('success', 'Leave application cancelled successfully.');
+    }
+
+    
+    public function cancel(Leave $leave): RedirectResponse
+    {
+        $user = Auth::guard('web')->user();
+        abort_if($user->getAuthIdentifier() != $leave->user_id, 403, 'You are not authorized to delete this leave application.');
+        
+        if (!$leave->isPending() && !$leave->isDraft()) {
+            return redirect()->route('leaves.index')
+                ->with('error', 'Only pending leave applications can be cancelled.');
+        }
+
+        $leave->update(['is_cancelled' => true]);
 
         return redirect()->route('leaves.index')
             ->with('success', 'Leave application cancelled successfully.');

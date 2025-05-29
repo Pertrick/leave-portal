@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { computed, onMounted } from 'vue';
+import { computed } from 'vue';
 import { type NavigationItem } from '@/types';
 import Sidebar from '@/components/Sidebar.vue';
 import Header from '@/components/Header.vue';
@@ -10,28 +10,22 @@ const props = defineProps<{
     title?: string;
 }>();
 
-const pageTitle = computed(() => {
-    return props.title || usePage().props.title as string || 'Leave Portal';
-});
-
 const navigation = computed<NavigationItem[]>(() => {
     const page = usePage();
-    const nav = (page.props.navigation as NavigationItem[]) || [];
-    console.log('Navigation data:', nav);
-    return nav;
+    return (page.props.navigation as NavigationItem[]) || [];
 });
 
 const breadcrumbs = computed<NavigationItem[]>(() => {
     const page = usePage();
-    const crumbs = (page.props.breadcrumbs as NavigationItem[]) || [];
-    console.log('Breadcrumbs data:', crumbs);
-    return crumbs;
+    return (page.props.breadcrumbs as NavigationItem[]) || [];
 });
 
 const currentTitle = computed(() => {
+    if (props.title) return props.title;
+    
     const path = usePage().url;
     
-    // First check children
+    // Check children first
     for (const item of navigation.value) {
         if (item.children) {
             const child = item.children.find(child => 
@@ -48,25 +42,22 @@ const currentTitle = computed(() => {
     
     return parent?.title || 'Dashboard';
 });
-
-onMounted(() => {
-    console.log('AppLayout mounted');
-    console.log('Page props:', usePage().props);
-});
-
-defineExpose({});
 </script>
 
 <template>
-    <div>
+    <div class="min-h-screen bg-background">
         <Alert />
-        <div class="flex h-screen bg-background">
+        <div class="flex">
             <Sidebar :navigation="navigation" />
             
-            <div class="flex flex-1 flex-col overflow-hidden">
-                <Header :breadcrumbs="breadcrumbs" :title="currentTitle" />
+            <div class="flex-1 flex flex-col min-h-screen">
+                <Header :breadcrumbs="breadcrumbs" :title="currentTitle">
+                    <template #actions>
+                        <slot name="header-actions" />
+                    </template>
+                </Header>
                 
-                <main class="flex-1 overflow-y-auto p-4">
+                <main class="flex-1">
                     <slot />
                 </main>
             </div>

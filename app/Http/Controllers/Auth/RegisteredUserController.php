@@ -63,7 +63,7 @@ class RegisteredUserController extends Controller
                 'password' => Hash::make($validated['password']),
             ]);
 
-            $employeeRole = Role::firstOrCreate(['name' => 'Employee']);
+            $employeeRole = Role::firstOrCreate(['name' => 'employee']);
             $user->assignRole($employeeRole);
 
             event(new NewAccount($user, $validated['password']));

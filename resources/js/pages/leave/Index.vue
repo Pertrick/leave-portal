@@ -250,7 +250,7 @@ const closeDeleteModal = () => {
 }
 
 const deleteLeave = () => {
-  router.delete(route('leaves.destroy', leaveToDelete.value.id), {
+  router.delete(route('leaves.destroy', leaveToDelete.value.uuid), {
     onSuccess: () => {
       closeDeleteModal()
     }

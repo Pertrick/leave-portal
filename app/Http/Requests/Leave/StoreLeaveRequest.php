@@ -34,9 +34,28 @@ class StoreLeaveRequest extends FormRequest
             'reason' => 'required|string|min:10',
             'status' => 'required|string|in:pending',
             'applicant_comment' => 'nullable|string',
-            'replacement_staff_name' => 'nullable|string|max:255',
-            'replacement_staff_phone' => 'nullable|string|max:20',
-            'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            'replacement_staff_name' => 'required|string|max:255',
+            'replacement_staff_phone' => 'required|string|max:20',
+            'attachment' => [
+                'nullable',
+                function ($attribute, $value, $fail) {
+                    if ($value instanceof \Illuminate\Http\UploadedFile) {
+                        // Validate file upload
+                        $validator = \Illuminate\Support\Facades\Validator::make(
+                            [$attribute => $value],
+                            [
+                                $attribute => 'file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:5120'
+                            ]
+                        );
+                        
+                        if ($validator->fails()) {
+                            $fail($validator->errors()->first($attribute));
+                        }
+                    } elseif (!is_string($value) && !is_null($value)) {
+                        $fail('The attachment must be either a file upload or a valid path.');
+                    }
+                }
+            ],
         ];
     }
 
@@ -55,8 +74,8 @@ class StoreLeaveRequest extends FormRequest
             'end_date.after_or_equal' => 'End date must be the same as or after the start date.',
             'reason.required' => 'Please provide a reason for your leave request.',
             'reason.min' => 'The reason must be at least 10 characters long.',
-            'attachment.mimes' => 'The attachment must be a PDF, JPG, JPEG, or PNG file.',
-            'attachment.max' => 'The attachment must not exceed 2MB.',
+            'attachment.mimes' => 'The attachment must be a PDF, JPG, JPEG, PNG, DOC, DOCX, XLS, or XLSX file.',
+            'attachment.max' => 'The attachment must not exceed 5MB.',
         ];
     }
 } 

@@ -193,20 +193,6 @@
                         >
                           View
                         </Link>
-                        <button
-                          v-if="leave.status === 'pending'"
-                          @click="approveLeave(leave)"
-                          class="text-green-600 hover:text-green-900"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          v-if="leave.status === 'pending'"
-                          @click="rejectLeave(leave)"
-                          class="text-red-600 hover:text-red-900"
-                        >
-                          Reject
-                        </button>
                       </div>
                     </td>
                   </tr>
