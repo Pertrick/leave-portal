@@ -10,15 +10,14 @@ use App\Http\Controllers\SupervisorController;
 use App\Http\Controllers\DepartmentHeadController;
 use App\Http\Controllers\Admin\DepartmentRelationshipController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\DashboardController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Profile Routes
     Route::get('/profile', function () {

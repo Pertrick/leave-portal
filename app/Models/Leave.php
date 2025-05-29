@@ -18,24 +18,25 @@ class Leave extends Model
         'leave_type_id',
         'start_date',
         'end_date',
-        'calendar_days',
-        'working_days',
+        'total_days',
         'reason',
+        'status',
+        'approved_by',
+        'rejected_by',
+        'rejection_reason',
         'applicant_comment',
         'replacement_staff_name',
         'replacement_staff_phone',
         'attachment',
         'current_approval_level',
         'current_approval_id',
-        'status',
         'is_cancelled'
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
-        'calendar_days' => 'integer',
-        'working_days' => 'integer',
+        'total_days' => 'decimal:1',
         'is_cancelled' => 'boolean'
     ];
 
@@ -94,7 +95,7 @@ class Leave extends Model
     }
 
     public function getRouteKeyName()
-{
-    return 'uuid';
-}
+    {
+        return 'uuid';
+    }
 } 
