@@ -7,31 +7,46 @@ import { Label } from '@/components/ui/label';
 import { SearchSelect } from '@/components/ui/select';
 import InputError from '@/components/InputError.vue';
 import { computed, watch, getCurrentInstance } from 'vue';
+import type { ComponentInternalInstance } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useFlash } from '@/composables/useFlash';
 
-const { flash } = useFlash()
-const { proxy } = getCurrentInstance()
+const { flash } = useFlash();
+const instance = getCurrentInstance();
+const proxy = instance?.proxy;
 
 const props = defineProps<{
     departments: Array<{ id: number; name: string }>;
     userLevels: Array<{ id: number; name: string }>;
+    staffData: {
+        staff_id: string;
+        firstname: string;
+        lastname: string;
+        email: string;
+        phone?: string;
+        address?: string;
+        department_id: number;
+        designation?: string;
+        gender?: string;
+        dob?: string;
+        join_date: string;
+    } | null;
 }>();
 
 const form = useForm({
-    staff_id: '',
+    staff_id: props.staffData?.staff_id || '',
     username: '',
-    firstname: '',
-    lastname: '',
-    email: '',
-    phone: '',
-    address: '',
+    firstname: props.staffData?.firstname || '',
+    lastname: props.staffData?.lastname || '',
+    email: props.staffData?.email || '',
+    phone: props.staffData?.phone || '',
+    address: props.staffData?.address || '',
     user_level_id: null as number | null,
-    department_id: null as number | null,
-    designation: '',
-    gender: '',
-    dob: '',
-    join_date: '',
+    department_id: props.staffData?.department_id || null,
+    designation: props.staffData?.designation || '',
+    gender: props.staffData?.gender || '',
+    dob: props.staffData?.dob || '',
+    join_date: props.staffData?.join_date || '',
     password: '',
     password_confirmation: '',
 });
@@ -193,17 +208,17 @@ const submit = () => {
                 form.setError(field as FormFields, message);
             }
         });
-        proxy.$toast.error('Please correct the errors in the form.');
+        proxy?.$toast.error('Please correct the errors in the form.');
         return;
     }
 
     form.post(route('register'), {
         onSuccess: () => {
-            proxy.$toast.success('Staff Account Created Successfully!');
+            proxy?.$toast.success('Staff Account Created Successfully!');
             form.reset();
         },
         onError: (errors) => {
-            proxy.$toast.error('Registration failed. Please check the form for errors.');
+            proxy?.$toast.error('Registration failed. Please check the form for errors.');
         },
     });
 };
@@ -214,6 +229,9 @@ const submit = () => {
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 Register New Account
+                <span v-if="staffData" class="text-sm text-gray-500">
+                    (Pre-filled from Staff ID: {{ staffData.staff_id }})
+                </span>
             </h2>
         </template>
 

@@ -17,20 +17,19 @@ class Leave extends Model
         'user_id',
         'leave_type_id',
         'start_date',
+        'calendar_days',
+        'working_days',
         'end_date',
         'total_days',
         'reason',
         'status',
-        'approved_by',
-        'rejected_by',
-        'rejection_reason',
         'applicant_comment',
         'replacement_staff_name',
         'replacement_staff_phone',
         'attachment',
         'current_approval_level',
         'current_approval_id',
-        'is_cancelled'
+        'is_cancelled',
     ];
 
     protected $casts = [

@@ -3,14 +3,13 @@
 use App\Models\User;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Auth\ContactHRController;
 use App\Http\Controllers\Admin\HolidayController;
-use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\SupervisorController;
 use App\Http\Controllers\DepartmentHeadController;
 use App\Http\Controllers\Admin\DepartmentRelationshipController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Admin\LeaveApplicationController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
@@ -23,10 +22,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', function () {
         return Inertia::render('Profile/Index', [
             'user' => auth()->user()->load([
-                'department',
+                'department.activeHead',
                 'userLevel',
-                'activeSupervisors.supervisor',
-                'departmentHead.user',
+                'supervisor',
                 'leaveBalances.leaveType'
             ]),
         ]);
@@ -37,12 +35,20 @@ Route::middleware(['auth'])->group(function () {
     //     User::find(2)->update(['password' => bcrypt('12345678')]);
     // });
 
-    Route::middleware(['can:manage-holidays'])->prefix('admin')->name('admin.')->group(function () {
+    Route::middleware(['role:admin|hr'])->prefix('admin')->name('admin.')->group(function () {
+        // Holidays
         Route::resource('holidays', HolidayController::class);
         Route::post('holidays/{holiday}/toggle', [HolidayController::class, 'toggleStatus'])->name('holidays.toggle');
-    });
 
-    // Leave routes
+        // Leave Applications
+        Route::get('/leave-applications', [LeaveApplicationController::class, 'index'])->name('leave-applications.index');
+        Route::get('/leave-applications/{leave}', [LeaveApplicationController::class, 'show'])->name('leave-applications.show');
+        Route::get('/leave-applications/export', [LeaveApplicationController::class, 'export'])->name('leave-applications.export');
+
+        // Leave Reports
+        Route::get('/leave/report', [App\Http\Controllers\Admin\LeaveReportController::class, 'index'])->name('leave.report');
+        Route::get('/leave/export', [App\Http\Controllers\Admin\LeaveReportController::class, 'export'])->name('leave.export');
+    });
 });
 
 // Supervisor Management Routes
@@ -74,6 +80,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Staff Management Routes
     Route::prefix('staff')->name('staff.')->group(function () {
         Route::get('/', [StaffController::class, 'list'])->name('list');
+        Route::get('/account-requests', [StaffController::class, 'pendingLeaveAccounts'])->name('pending-leave-accounts');
         Route::get('/{user}', [StaffController::class, 'show'])->name('show');
         Route::get('/{user}/edit', [StaffController::class, 'edit'])->name('edit');
         Route::put('/{user}', [StaffController::class, 'update'])->name('update');
@@ -85,14 +92,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('staff.leave-balances');
     Route::post('/staff/{staff}/leave-balances', [StaffController::class, 'updateLeaveBalances'])
         ->name('staff.leave-balances.update');
-});
-
-// Admin Leave Applications
-Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/leave-applications', [App\Http\Controllers\Admin\LeaveApplicationController::class, 'index'])->name('leave.applications');
-    Route::post('/leave-applications/{leave}/approve', [App\Http\Controllers\Admin\LeaveApplicationController::class, 'approve'])->name('leave.approve');
-    Route::post('/leave-applications/{leave}/reject', [App\Http\Controllers\Admin\LeaveApplicationController::class, 'reject'])->name('leave.reject');
-    Route::get('/leave-applications/export', [App\Http\Controllers\Admin\LeaveApplicationController::class, 'export'])->name('leave.export');
 });
 
 require __DIR__.'/settings.php';

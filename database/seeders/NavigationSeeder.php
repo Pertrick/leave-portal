@@ -36,7 +36,7 @@ class NavigationSeeder extends Seeder
             'path' => 'leaves',
             'title' => 'My Applications',
             'parent_id' => $leave->id,
-            'roles' => ['admin', 'supervisor', 'hod', 'hr', 'employee'],
+            'roles' => ['supervisor', 'hod', 'hr', 'employee'],
             'icon' => 'document-text',
             'order' => 1,
             'is_dropdown' => false
@@ -46,7 +46,7 @@ class NavigationSeeder extends Seeder
             'path' => 'leaves/create',
             'title' => 'New Application',
             'parent_id' => $leave->id,
-            'roles' => ['admin', 'supervisor', 'hod', 'hr', 'employee'],
+            'roles' => ['supervisor', 'hod', 'hr', 'employee'],
             'icon' => 'plus-circle',
             'order' => 2,
             'is_dropdown' => false
@@ -56,7 +56,7 @@ class NavigationSeeder extends Seeder
             'path' => 'leaves/drafts',
             'title' => 'Drafts',
             'parent_id' => $leave->id,
-            'roles' => ['admin', 'supervisor', 'hod', 'hr', 'employee'],
+            'roles' => ['supervisor', 'hod', 'hr', 'employee'],
             'icon' => 'document-duplicate',
             'order' => 3,
             'is_dropdown' => false
@@ -66,7 +66,7 @@ class NavigationSeeder extends Seeder
             'path' => 'leave/approvals',
             'title' => 'Leave Approvals',
             'parent_id' => $leave->id,
-            'roles' => ['admin', 'supervisor', 'hod', 'hr'],
+            'roles' => ['supervisor', 'hod', 'hr'],
             'icon' => 'check-circle',
             'order' => 4,
             'is_dropdown' => false
@@ -89,6 +89,26 @@ class NavigationSeeder extends Seeder
             'roles' => ['admin', 'hr'],
             'icon' => 'calculator',
             'order' => 6,
+            'is_dropdown' => false
+        ]);
+
+        Navigation::create([
+            'path' => 'admin/holidays',
+            'title' => 'Holiday Management',
+            'parent_id' => $leave->id,
+            'roles' => ['admin', 'hr'],
+            'icon' => 'calendar-days',
+            'order' => 7,
+            'is_dropdown' => false
+        ]);
+
+        Navigation::create([
+            'path' => 'admin/leave-applications',
+            'title' => 'Leave Applications',
+            'parent_id' => $leave->id,
+            'roles' => ['admin', 'hr'],
+            'icon' => 'clipboard-document-list',
+            'order' => 8,
             'is_dropdown' => false
         ]);
 
@@ -131,6 +151,16 @@ class NavigationSeeder extends Seeder
             'is_dropdown' => false
         ]);
 
+        Navigation::create([
+            'path' => 'staff/account-requests',
+            'title' => 'Accounts Request',
+            'parent_id' => $staff->id,
+            'roles' => ['admin', 'hr'],
+            'icon' => 'user',
+            'order' => 1,
+            'is_dropdown' => false
+        ]);
+
         // Departments
         // Navigation::create([
         //     'path' => 'departments',
@@ -153,10 +183,10 @@ class NavigationSeeder extends Seeder
 
         // Reports Sub-items
         Navigation::create([
-            'path' => 'leave',
+            'path' => 'admin/leave/report',
             'title' => 'Leave Reports',
             'parent_id' => $reports->id,
-            'roles' => ['admin', 'supervisor', 'hod', 'hr'],
+            'roles' => ['admin', 'hr'],
             'icon' => 'calendar',
             'order' => 1,
             'is_dropdown' => false
@@ -202,25 +232,5 @@ class NavigationSeeder extends Seeder
             'order' => 7,
             'is_dropdown' => false,
         ]);
-
-        Navigation::create([
-            'path' => 'admin/holidays',
-            'title' => 'Holiday Management',
-            'roles' => ['admin'],
-            'icon' => 'calendar-days',
-            'parent_id' => $leave->id,
-            'order' => 8,
-            'is_dropdown' => false,
-        ]);
-
-        // Navigation::create([
-        //     'path' => 'leave-applications',
-        //     'title' => 'Leave Applications',
-        //     'roles' => ['Admin'],
-        //     'icon' => 'clipboard-document-list',
-        //     'parent_id' => $leave->id,
-        //     'order' => 9,
-        //     'is_dropdown' => false,
-        // ]);
     }
 } 

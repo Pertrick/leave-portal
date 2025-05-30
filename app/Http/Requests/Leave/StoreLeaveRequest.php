@@ -34,6 +34,8 @@ class StoreLeaveRequest extends FormRequest
             'reason' => 'required|string|min:10',
             'status' => 'required|string|in:pending',
             'applicant_comment' => 'nullable|string',
+            'calendar_days' => 'required|integer|min:0',
+            'working_days' => 'required|integer|min:0',
             'replacement_staff_name' => 'required|string|max:255',
             'replacement_staff_phone' => 'required|string|max:20',
             'attachment' => [
@@ -76,6 +78,8 @@ class StoreLeaveRequest extends FormRequest
             'reason.min' => 'The reason must be at least 10 characters long.',
             'attachment.mimes' => 'The attachment must be a PDF, JPG, JPEG, PNG, DOC, DOCX, XLS, or XLSX file.',
             'attachment.max' => 'The attachment must not exceed 5MB.',
+            'calendar_days.min' => 'Calendar days cannot be negative.',
+            'working_days.min' => 'Working days cannot be negative.',
         ];
     }
 } 

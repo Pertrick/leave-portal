@@ -1,12 +1,12 @@
 <template>
     <div class="relative">
         <div v-if="!src" class="flex items-center justify-center h-full w-full rounded-full bg-primary text-white font-medium" :class="sizeClasses">
-            {{ initials }}
+            {{ displayInitials }}
         </div>
         <img
             v-else
             :src="src"
-            :alt="name"
+            :alt="displayName"
             class="h-full w-full rounded-full object-cover"
             :class="[sizeClasses, ringClasses]"
         />
@@ -14,31 +14,30 @@
     </div>
 </template>
 
-<script setup>
-import { computed, watch } from 'vue';
+<script setup lang="ts">
+import { computed } from 'vue';
 
-const props = defineProps({
-    src: {
-        type: String,
-        default: null
-    },
-    name: {
-        type: String,
-        required: true
-    },
-    size: {
-        type: String,
-        default: 'md',
-        validator: (value) => ['sm', 'md', 'lg', 'xl'].includes(value)
-    },
-    showStatus: {
-        type: Boolean,
-        default: false
-    },
-    ring: {
-        type: Boolean,
-        default: false
-    }
+interface User {
+    firstname: string;
+    lastname: string;
+}
+
+interface Props {
+    src?: string | null;
+    name?: string | null;
+    user?: User | null;
+    size?: 'sm' | 'md' | 'lg' | 'xl';
+    showStatus?: boolean;
+    ring?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    src: null,
+    name: null,
+    user: null,
+    size: 'md',
+    showStatus: false,
+    ring: false
 });
 
 const sizeClasses = computed(() => ({
@@ -50,29 +49,28 @@ const sizeClasses = computed(() => ({
 
 const ringClasses = computed(() => props.ring ? 'ring-2 ring-background' : '');
 
-const initials = computed(() => {
-    console.log('Name prop:', props.name);
+const displayName = computed(() => {
+    if (props.name) return props.name;
+    if (props.user) return `${props.user.firstname} ${props.user.lastname}`;
+    return '';
+});
+
+const displayInitials = computed(() => {
+    const name = displayName.value;
     
-    if (!props.name) {
-        console.log('No name provided');
-        return '??';
-    }
+    if (!name) return '??';
     
-    const words = props.name.trim().split(/\s+/);
-    console.log('Split words:', words);
+    const words = name.trim().split(/\s+/);
     
     if (words.length === 1) {
-        console.log('Single word, returning:', words[0][0].toUpperCase());
         return words[0][0].toUpperCase();
     }
     
-    const result = (words[0][0] + words[words.length - 1][0]).toUpperCase();
-    console.log('Final initials:', result);
-    return result;
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
 });
 
-// Add a watch to debug prop changes
-watch(() => props.name, (newName) => {
-    console.log('Name prop changed:', newName);
-}, { immediate: true });
+defineExpose({
+    displayName,
+    displayInitials
+});
 </script> 

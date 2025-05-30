@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Supervisor extends Model
 {
@@ -24,9 +25,9 @@ class Supervisor extends Model
         'end_date' => 'date',
     ];
 
-    public function user()
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 
     public function supervisor()
@@ -34,7 +35,7 @@ class Supervisor extends Model
         return $this->belongsTo(User::class, 'supervisor_id');
     }
 
-    public function department()
+    public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
     }

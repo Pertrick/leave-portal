@@ -13,7 +13,7 @@
                         <div class="flex items-center space-x-4">
                             <UserAvatar
                                 :src="user.avatar"
-                                :name="user.firstname || ''"
+                                :name="`${user.firstname} ${user.lastname}`"
                                 size="lg"
                                 :ring="true"
                             />
@@ -73,7 +73,9 @@
 
                             <div>
                                 <h4 class="text-sm font-medium text-gray-500">Head of Department</h4>
-                                <p class="mt-1 text-sm text-gray-900">{{ user.department_head?.user?.firstname || 'Not assigned' }}</p>
+                                <p class="mt-1 text-sm text-gray-900">
+                                    {{ user.department?.active_head ? `${user.department.active_head.user.firstname} ${user.department.active_head.user.lastname}` : 'Not assigned' }}
+                                </p>
                             </div>
 
                         </div>

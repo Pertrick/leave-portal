@@ -32,12 +32,15 @@ class SaveDraftRequest extends FormRequest
             'leave_type_id' => 'nullable|exists:leave_types,id',
             'start_date' => 'nullable|date|after_or_equal:today',
             'end_date' => 'nullable|date|after_or_equal:start_date',
+            'calendar_days' => 'required|integer|min:0',
+            'working_days' => 'required|integer|min:0',
             'reason' => 'nullable|string|min:10',
             'applicant_comment' => 'nullable|string',
             'status' => 'required|string|in:draft',
             'replacement_staff_name' => 'nullable|string|max:255',
             'replacement_staff_phone' => 'nullable|string|max:20',
             'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            
         ];
     }
 
@@ -54,6 +57,8 @@ class SaveDraftRequest extends FormRequest
             'reason.min' => 'The reason must be at least 10 characters long.',
             'attachment.mimes' => 'The attachment must be a PDF, JPG, JPEG, or PNG file.',
             'attachment.max' => 'The attachment must not exceed 2MB.',
+            'calendar_days.min' => 'Calendar days cannot be negative.',
+            'working_days.min' => 'Working days cannot be negative.',
         ];
     }
 } 

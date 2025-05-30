@@ -30,6 +30,15 @@ return new class extends Migration
             $table->enum('status', ['draft', 'pending', 'approved', 'rejected'])->default('draft'); // Leave status: draft, pending, approved, rejected
             $table->boolean('is_cancelled')->default(false);
             $table->timestamps();
+
+            $table->index('start_date');
+            $table->index('end_date');
+            $table->index('status');
+            $table->index('leave_type_id');
+            $table->index('user_id');
+            $table->index('created_at');
+            $table->index('working_days');
+            
         });
     }
 

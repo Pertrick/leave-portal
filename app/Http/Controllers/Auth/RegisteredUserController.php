@@ -13,6 +13,7 @@ use App\Models\Department;
 use Illuminate\Http\Request;
 use App\Models\AccountRequest;
 use Illuminate\Support\Facades\DB;
+use App\Services\LeaveBalanceService;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -23,14 +24,26 @@ use App\Http\Requests\Auth\RegisterRequest;
 
 class RegisteredUserController extends Controller
 {
+    public function __construct(
+        protected LeaveBalanceService $leaveBalanceService
+    ) {}
+
     /**
      * Display the registration view.
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
+        $staffData = null;
+        if ($request->has('staff_id')) {
+            $staffData = AccountRequest::where('staff_id', $request->staff_id)
+                ->where('status', 'pending')
+                ->first();
+        }
+
         return Inertia::render('auth/Register', [
             'departments' => Department::select('id', 'name')->get(),
             'userLevels' => UserLevel::select('id', 'name')->get(),
+            'staffData' => $staffData,
         ]);
     }
 
@@ -66,9 +79,16 @@ class RegisteredUserController extends Controller
             $employeeRole = Role::firstOrCreate(['name' => 'employee']);
             $user->assignRole($employeeRole);
 
+            // Initialize leave balances for the new user
+            $this->leaveBalanceService->initializeLeaveBalances($user);
+
             event(new NewAccount($user, $validated['password']));
 
-            AccountRequest::markAsProcessed($validated['staff_id'], auth()->id());
+            if ($request->has('staff_id')) {
+                AccountRequest::where('staff_id', $validated['staff_id'])
+                    ->where('status', 'pending')
+                    ->update(['status' => 'processed', 'processed_by' => Auth::id()]);
+            }
             
             DB::commit();
 
@@ -81,5 +101,4 @@ class RegisteredUserController extends Controller
                 ->withInput();
         }
     }
-
 }

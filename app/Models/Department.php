@@ -49,11 +49,11 @@ class Department extends Model
         return $this->hasMany(Supervisor::class);
     }
 
-    public function activeHeads()
+    public function activeHead()
     {
-        return $this->hasMany(DepartmentHead::class)
+        return $this->hasOne(DepartmentHead::class)
             ->whereNull('end_date')
-            ->orderBy('is_acting', 'asc') // Regular heads first (is_acting = 0), then acting heads (is_acting = 1)
+            ->latest()  // Get the most recently assigned head
             ->with('user');
     }
 

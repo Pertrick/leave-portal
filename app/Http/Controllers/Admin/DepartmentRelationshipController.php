@@ -28,10 +28,7 @@ class DepartmentRelationshipController extends Controller
             // Get all departments for the dropdown
             $departments = Department::orderBy('name')->get();
 
-            // Get all active heads (both regular and acting)
-            $departmentHeads = $department->activeHeads()
-                ->orderBy('is_acting', 'asc') // Regular heads first, then acting heads
-                ->get();
+            $departmentHead = $department->activeHead()->first();
 
             // Get active supervisors with their supervised users
             $supervisors = $department->supervisors()
@@ -57,7 +54,7 @@ class DepartmentRelationshipController extends Controller
 
             return Inertia::render('Admin/DepartmentRelationships', [
                 'departments' => $departments,
-                'departmentHeads' => $departmentHeads,
+                'departmentHead' => $departmentHead,
                 'supervisors' => $supervisors,
                 'availableUsers' => $availableUsers,
                 'availableSupervisors' => $availableSupervisors,
@@ -71,7 +68,6 @@ class DepartmentRelationshipController extends Controller
 
     public function assignHead(Request $request, Department $department)
     {
-
         try {
             $validated = $request->validate([
                 'user_id' => 'required|exists:users,id',
@@ -84,8 +80,8 @@ class DepartmentRelationshipController extends Controller
 
             // Check if user is already a head of another department
             $existingHead = DepartmentHead::where('user_id', $validated['user_id'])
-                ->where('is_acting', false)
                 ->whereNull('end_date')
+                ->where('department_id', '!=', $department->id)
                 ->first();
 
             if ($existingHead) {
@@ -102,7 +98,7 @@ class DepartmentRelationshipController extends Controller
 
                 // Remove role from previous head
                 $previousHead = $department->activeHead->user;
-                $previousHead->removeRole('hod-manager');
+                $previousHead->removeRole('hod');
             }
 
             // Create new head
@@ -119,10 +115,10 @@ class DepartmentRelationshipController extends Controller
             $user->assignRole('hod');
 
             // Update pending leave approvals for the department
-            $previousHeads = $department->activeHeads()->with('user')->get();
-            $previousHeads->each(function ($head) use ($user, $department) {
+            if ($department->activeHead) {
+                $previousHead = $department->activeHead;
                 // Find all pending leave approvals where the previous head was the approver
-                $pendingApprovals = \App\Models\LeaveApproval::where('approver_id', $head->user_id)
+                $pendingApprovals = \App\Models\LeaveApproval::where('approver_id', $previousHead->user_id)
                     ->where('status', 'pending')
                     ->whereHas('leave', function ($query) use ($department) {
                         $query->whereHas('user', function ($q) use ($department) {
@@ -137,14 +133,14 @@ class DepartmentRelationshipController extends Controller
                         'approver_id' => $user->id
                     ]);
 
-                    // If this was the current approval for the leave, update the leave record
-                    if ($approval->leave->current_approval_id === $approval->id) {
-                        $approval->leave->update([
-                            'current_approval_id' => $approval->id
-                        ]);
-                    }
+                    // // If this was the current approval for the leave, update the leave record
+                    // if ($approval->leave->current_approval_id === $approval->id) {
+                    //     $approval->leave->update([
+                    //         'current_approval_id' => $approval->id
+                    //     ]);
+                    // }
                 }
-            });
+            }
 
             DB::commit();
 
@@ -153,6 +149,7 @@ class DepartmentRelationshipController extends Controller
             DB::rollBack();
             throw $e;
         } catch (\Exception $e) {
+            Log::info($e->getMessage());
             DB::rollBack();
             return redirect()->back()->with('error', 'Error assigning department head: ' . $e->getMessage());
         }

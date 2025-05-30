@@ -664,11 +664,58 @@ class LeaveApplicationService
      */
     private function getApprovers(ApprovalLevel $level): Collection
     {
+        $user = Auth::user();
+        
+        // For supervisor level, get the user's assigned supervisor
+        if ($level->role_name === 'supervisor') {
+            return User::whereHas('supervisedUsers', function ($query) use ($user) {
+                $query->where('user_id', $user->id)
+                    ->where('is_active', true);
+            })->get();
+        }
+        
+        // For HOD level, get the current active head
+        if ($level->role_name === 'hod') {
+            $departmentHead = $user->department->activeHead()->first();
+            return $departmentHead ? collect([$departmentHead->user]) : collect();
+        }
+        
+        // For other roles, get users with the specific role in the same department
         return User::whereHas('roles', function ($query) use ($level) {
             $query->where('name', $level->role_name);
         })
-        ->where('department_id', Auth::user()->department_id)
+        ->where('department_id', $user->department_id)
         ->where('is_active', true)
         ->get();
+    }
+
+    public function getLeaveHistories(): LengthAwarePaginator
+    {
+        $user = Auth::user();
+        
+        return Leave::whereIn('status', ['approved', 'rejected'])
+            ->whereHas('approvals', function ($query) use ($user) {
+                $query->where('approver_id', $user->id)
+                    ->whereIn('status', ['approved', 'rejected']);
+            })
+            ->with([
+                'user',
+                'leaveType',
+                'approvals' => function ($query) {
+                    $query->orderBy('sequence');
+                },
+                'approvals.approver',
+                'approvals.approvalLevel'
+            ])
+            ->withCount([
+                'approvals as approved_count' => function ($query) {
+                    $query->where('status', 'approved');
+                },
+                'approvals as rejected_count' => function ($query) {
+                    $query->where('status', 'rejected');
+                }
+            ])
+            ->latest()
+            ->paginate(10);
     }
 } 

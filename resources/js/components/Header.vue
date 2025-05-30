@@ -10,14 +10,23 @@ import {
     KeyIcon,
     ChevronDownIcon
 } from '@heroicons/vue/24/outline';
-import UserAvatar from '@/Components/UserAvatar.vue';
+import UserAvatar from '@/components/UserAvatar.vue';
+
+interface User {
+    firstname: string;
+    lastname: string;
+    email: string;
+    role: string;
+    profile_photo_url?: string;
+}
 
 const props = defineProps<{
     breadcrumbs: NavigationItem[];
     title: string;
 }>();
 
-const user = usePage().props.auth.user;
+const page = usePage();
+const user = page.props.auth.user as User;
 const isUserMenuOpen = ref(false);
 
 const getFullPath = (item: NavigationItem): string => {
@@ -55,13 +64,13 @@ defineExpose({});
                     >
                         <UserAvatar
                             :src="user.profile_photo_url"
-                            :name="user.name || ''"
+                            :name="`${user.firstname} ${user.lastname}`"
                             size="sm"
                             :show-status="true"
                             :ring="true"
                         />
                         <div class="hidden md:block text-left">
-                            <p class="text-sm font-medium">{{ user.name }}</p>
+                            <p class="text-sm font-medium">{{ user.firstname }} {{ user.lastname }}</p>
                             <p class="text-xs text-muted-foreground">{{ user.role }}</p>
                         </div>
                         <ChevronDown
@@ -79,7 +88,7 @@ defineExpose({});
                         aria-labelledby="user-menu"
                     >
                         <div class="px-4 py-3 border-b border-border">
-                            <p class="text-sm font-medium">{{ user.name }}</p>
+                            <p class="text-sm font-medium">{{ user.firstname }} {{ user.lastname }}</p>
                             <p class="text-xs text-muted-foreground truncate">{{ user.email }}</p>
                         </div>
 

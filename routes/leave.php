@@ -30,7 +30,7 @@ Route::middleware(['auth'])->group(function () {
     
 
     // Leave Types
-    Route::middleware(['can:manage-leave-types'])->group(function () {
+    Route::middleware(['can:manage-leave'])->group(function () {
         Route::get('/leave/types', [LeaveTypeController::class, 'index'])->name('leave.types.index');
         Route::get('/leave/types/create', [LeaveTypeController::class, 'create'])->name('leave.types.create');
         Route::post('/leave/types', [LeaveTypeController::class, 'store'])->name('leave.types.store');
@@ -40,7 +40,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Leave Balances
-    Route::middleware(['can:manage-leave-balances'])->group(function () {
+    Route::middleware(['can:manage-leave'])->group(function () {
         Route::get('/leave/balances', [LeaveBalanceController::class, 'index'])->name('leave.balances.index');
         Route::get('/leave/balances/create', [LeaveBalanceController::class, 'create'])->name('leave.balances.create');
         Route::post('/leave/balances', [LeaveBalanceController::class, 'store'])->name('leave.balances.store');

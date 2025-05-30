@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Auth\Access\AuthorizationException;
 use App\Models\LeaveBalance;
 use App\Models\LeaveBalanceAuditLog;
+use App\Models\AccountRequest;
 
 class StaffController extends Controller
 {
@@ -69,11 +70,13 @@ class StaffController extends Controller
     {
         $this->authorize('manage-users');
 
+        $roles = \Spatie\Permission\Models\Role::whereNotIn('name', ['supervisor', 'hod','employee'])->get();
+
         return Inertia::render('Staff/Edit', [
             'staff' => $user->load('roles'),
             'departments' => Department::orderBy('name')->get(),
             'userLevels' => UserLevel::orderBy('name')->get(),
-            'roles' => \Spatie\Permission\Models\Role::all(),
+            'roles' => $roles,
         ]);
     }
 
@@ -189,5 +192,26 @@ class StaffController extends Controller
         });
 
         return redirect()->back()->with('success', 'Leave balances updated successfully.');
+    }
+
+    public function pendingLeaveAccounts()
+    {
+        // $this->authorize('manage-users');
+
+        $query = AccountRequest::with(['processor'])
+            ->where('status', config('account.request_status.pending'))
+            ->orderBy('created_at', 'desc');
+
+        // Search
+        if (request('search')) {
+            $search = request('search');
+            $query->where('staff_id', 'like', "%{$search}%");
+        }
+
+        $requests = $query->paginate(10);
+
+        return Inertia::render('Staff/PendingLeaveAccounts', [
+            'requests' => $requests,
+        ]);
     }
 } 

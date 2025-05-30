@@ -5,36 +5,101 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\Leave;
+use App\Models\LeaveType;
+use App\Exports\LeaveApplicationsExport;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
+use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Maatwebsite\Excel\Facades\Excel;
 
 class LeaveApplicationController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): Response
     {
-        $query = Leave::with(['user.department', 'leaveType'])
-            ->when($request->department, function ($query, $department) {
-                return $query->whereHas('user', function ($q) use ($department) {
-                    $q->where('department_id', $department);
+        $query = Leave::select([
+                'leaves.*',
+                'users.firstname',
+                'users.lastname',
+                'users.email',
+                'departments.name as department_name',
+                'leave_types.name as leave_type_name'
+            ])
+            ->join('users', 'leaves.user_id', '=', 'users.id')
+            ->join('departments', 'users.department_id', '=', 'departments.id')
+            ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+            ->with(['approvals' => function ($query) {
+                $query->with(['approver:id,firstname,lastname,email', 'approvalLevel:id,name,level'])
+                    ->orderBy('sequence');
+            }])
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = $request->input('search');
+                $q->where(function ($query) use ($search) {
+                    $query->where('users.firstname', 'like', "%{$search}%")
+                        ->orWhere('users.lastname', 'like', "%{$search}%")
+                        ->orWhere('users.email', 'like', "%{$search}%")
+                        ->orWhere('leaves.reason', 'like', "%{$search}%");
                 });
             })
-            ->when($request->status, function ($query, $status) {
-                return $query->where('status', $status);
+            ->when($request->filled('status'), function ($q) use ($request) {
+                $q->where('leaves.status', $request->input('status'));
             })
-            ->when($request->start_date, function ($query, $date) {
-                return $query->where('start_date', '>=', $date);
+            ->when($request->filled('department_id'), function ($q) use ($request) {
+                $q->where('users.department_id', $request->input('department_id'));
             })
-            ->when($request->end_date, function ($query, $date) {
-                return $query->where('end_date', '<=', $date);
+            ->when($request->filled('leave_type_id'), function ($q) use ($request) {
+                $q->where('leaves.leave_type_id', $request->input('leave_type_id'));
+            })
+            ->when($request->filled('date_range'), function ($q) use ($request) {
+                $dates = explode(' to ', $request->input('date_range'));
+                if (count($dates) === 2) {
+                    $q->where(function ($query) use ($dates) {
+                        $query->whereBetween('leaves.start_date', $dates)
+                            ->orWhereBetween('leaves.end_date', $dates);
+                    });
+                }
+            })
+            ->when($request->filled('approver_status'), function ($q) use ($request) {
+                $status = $request->input('approver_status');
+                $q->whereHas('approvals', function ($query) use ($status) {
+                    $query->where('status', $status);
+                });
             });
 
-        $applications = $query->latest()->paginate(10);
-        $departments = Department::all();
+        $leaves = $query->latest('leaves.created_at')->paginate(10)->withQueryString();
 
-        return Inertia::render('Admin/LeaveApplications', [
-            'applications' => $applications,
-            'departments' => $departments,
-            'filters' => $request->only(['department', 'status', 'start_date', 'end_date'])
+        return Inertia::render('Admin/LeaveApplications/Index', [
+            'leaves' => $leaves,
+            'departments' => Department::all(),
+            'leaveTypes' => LeaveType::all(),
+            'filters' => $request->only(['search', 'status', 'department_id', 'leave_type_id', 'date_range', 'approver_status'])
+        ]);
+    }
+
+    public function show(Leave $leave): Response
+    {
+        $leave = Leave::select([
+                'leaves.*',
+                'users.firstname',
+                'users.lastname',
+                'users.email',
+                'departments.name as department_name',
+                'leave_types.name as leave_type_name'
+            ])
+            ->join('users', 'leaves.user_id', '=', 'users.id')
+            ->join('departments', 'users.department_id', '=', 'departments.id')
+            ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+            ->where('leaves.id', $leave->id)
+            ->with(['approvals' => function ($query) {
+                $query->with(['approver:id,firstname,lastname,email', 'approvalLevel:id,name,level'])
+                    ->orderBy('sequence');
+            }])
+            ->first();
+
+
+        return Inertia::render('Admin/LeaveApplications/Show', [
+            'leave' => $leave
         ]);
     }
 
@@ -43,7 +108,7 @@ class LeaveApplicationController extends Controller
         try {
             $leave->update([
                 'status' => 'approved',
-                'approved_by' => auth()->id(),
+                'approved_by' => Auth::id(),
                 'approved_at' => now()
             ]);
 
@@ -58,7 +123,7 @@ class LeaveApplicationController extends Controller
         try {
             $leave->update([
                 'status' => 'rejected',
-                'rejected_by' => auth()->id(),
+                'rejected_by' => Auth::id(),
                 'rejected_at' => now()
             ]);
 
@@ -68,64 +133,59 @@ class LeaveApplicationController extends Controller
         }
     }
 
-    public function export(Request $request)
+    public function export(Request $request): BinaryFileResponse
     {
-        $query = Leave::with(['user.department', 'leaveType'])
-            ->when($request->department, function ($query, $department) {
-                return $query->whereHas('user', function ($q) use ($department) {
-                    $q->where('department_id', $department);
+        $query = Leave::select([
+                'leaves.*',
+                'users.firstname',
+                'users.lastname',
+                'users.email',
+                'departments.name as department_name',
+                'leave_types.name as leave_type_name'
+            ])
+            ->join('users', 'leaves.user_id', '=', 'users.id')
+            ->join('departments', 'users.department_id', '=', 'departments.id')
+            ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+            ->with(['approvals' => function ($query) {
+                $query->with(['approver:id,firstname,lastname,email', 'approvalLevel:id,name,level'])
+                    ->orderBy('sequence');
+            }])
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = $request->input('search');
+                $q->where(function ($query) use ($search) {
+                    $query->where('users.firstname', 'like', "%{$search}%")
+                        ->orWhere('users.lastname', 'like', "%{$search}%")
+                        ->orWhere('users.email', 'like', "%{$search}%")
+                        ->orWhere('leaves.reason', 'like', "%{$search}%");
                 });
             })
-            ->when($request->status, function ($query, $status) {
-                return $query->where('status', $status);
+            ->when($request->filled('status'), function ($q) use ($request) {
+                $q->where('leaves.status', $request->input('status'));
             })
-            ->when($request->start_date, function ($query, $date) {
-                return $query->where('start_date', '>=', $date);
+            ->when($request->filled('department_id'), function ($q) use ($request) {
+                $q->where('users.department_id', $request->input('department_id'));
             })
-            ->when($request->end_date, function ($query, $date) {
-                return $query->where('end_date', '<=', $date);
+            ->when($request->filled('leave_type_id'), function ($q) use ($request) {
+                $q->where('leaves.leave_type_id', $request->input('leave_type_id'));
+            })
+            ->when($request->filled('date_range'), function ($q) use ($request) {
+                $dates = explode(' to ', $request->input('date_range'));
+                if (count($dates) === 2) {
+                    $q->where(function ($query) use ($dates) {
+                        $query->whereBetween('leaves.start_date', $dates)
+                            ->orWhereBetween('leaves.end_date', $dates);
+                    });
+                }
+            })
+            ->when($request->filled('approver_status'), function ($q) use ($request) {
+                $status = $request->input('approver_status');
+                $q->whereHas('approvals', function ($query) use ($status) {
+                    $query->where('status', $status);
+                });
             });
 
-        $applications = $query->get();
+        $leaves = $query->get();
 
-        // Generate CSV
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="leave-applications.csv"',
-        ];
-
-        $callback = function() use ($applications) {
-            $file = fopen('php://output', 'w');
-            
-            // Add headers
-            fputcsv($file, [
-                'Employee Name',
-                'Department',
-                'Leave Type',
-                'Start Date',
-                'End Date',
-                'Status',
-                'Applied At',
-                'Approved/Rejected At'
-            ]);
-
-            // Add data
-            foreach ($applications as $application) {
-                fputcsv($file, [
-                    $application->user->firstname . ' ' . $application->user->lastname,
-                    $application->user->department->name,
-                    $application->leaveType->name,
-                    $application->start_date,
-                    $application->end_date,
-                    $application->status,
-                    $application->created_at,
-                    $application->approved_at ?? $application->rejected_at
-                ]);
-            }
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return Excel::download(new LeaveApplicationsExport($leaves), 'leave_applications_' . now()->format('Y-m-d_His') . '.xlsx');
     }
 } 

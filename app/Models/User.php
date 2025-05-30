@@ -109,7 +109,6 @@ class User extends Authenticatable
     }
 
 
-
     public function getFullNameAttribute(): string
     {
         return "{$this->firstname} {$this->lastname}";
@@ -188,9 +187,9 @@ class User extends Authenticatable
         return $this->hasRole('settings-manager') || $this->hasRole('admin');
     }
 
-    public function supervisors()
+    public function supervisor()
     {
-        return $this->hasMany(Supervisor::class, 'user_id');
+        return $this->hasOne(Supervisor::class, 'user_id');
     }
 
     public function activeSupervisors()
@@ -215,11 +214,31 @@ class User extends Authenticatable
 
     public function departmentHead()
     {
-        return $this->hasOne(DepartmentHead::class)->where('is_acting', false);
+        return $this->department->activeHeads();
+    }
+
+    public function isDepartmentHead(): bool
+    {
+        return $this->department->activeHeads()
+            ->where('user_id', $this->id)
+            ->exists();
+    }
+
+    public function isActingDepartmentHead(): bool
+    {
+        return $this->department->activeHeads()
+            ->where('user_id', $this->id)
+            ->where('is_acting', true)
+            ->exists();
     }
 
     public function actingDepartmentHead()
     {
-        return $this->hasOne(DepartmentHead::class)->where('is_acting', true);
+        return $this->department->actingHead();
+    }
+
+    public function currentDepartmentHead()
+    {
+        return $this->department->activeHeads()->first();
     }
 }

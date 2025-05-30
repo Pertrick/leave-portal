@@ -354,11 +354,15 @@ const saveDraft = () => {
 const updateDateRange = async () => {
   if (form.start_date && form.end_date) {
     try {
-      const response = await axios.get('admin/api/holidays', {
+      const response = await axios.get('/api/holidays', {
         params: {
           start_date: form.start_date,
           end_date: form.end_date
-        }
+        },
+        headers: {
+          'Accept': 'application/json'
+        },
+        withCredentials: true
       })
       holidays.value = response.data
     } catch (error) {

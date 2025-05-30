@@ -1,6 +1,19 @@
 <?php
 
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | Leave Balance Settings
+    |--------------------------------------------------------------------------
+    |
+    | This file contains the configuration settings for leave balances.
+    |
+    */
+
+    'proration' => [
+        'enabled' => env('LEAVE_PRORATION_ENABLED', true),
+        'half_year_month' => env('LEAVE_PRORATION_HALF_YEAR_MONTH', 6), // June
+    ],
     'defaults' => [
         'annual_leave' => [
             'days_per_year' => [
