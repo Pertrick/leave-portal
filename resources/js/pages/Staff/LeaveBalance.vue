@@ -9,7 +9,7 @@
           <div class="p-6">
             <!-- Staff Info Header -->
             <div class="mb-6">
-              <h2 class="text-lg font-medium text-gray-900">{{ staff.full_name }}</h2>
+              <h2 class="text-lg font-medium text-gray-900">{{ staff.firstname }} {{ staff.lastname }}</h2>
               <p class="text-sm text-gray-500">Staff ID: {{ staff.staff_id }}</p>
             </div>
 
@@ -26,9 +26,9 @@
                       'text-green-600': balance.days_remaining > 0,
                       'text-red-600': balance.days_remaining <= 0
                     }">
-                      {{ balance.total_entitled_days > 0 
+                      {{ balance.total_entitled_days && balance.total_entitled_days > 0 
                           ? Math.round((balance.days_remaining / balance.total_entitled_days) * 100) 
-                          : 0 }}% Available
+                          : 0 }}% Available ({{balance.days_remaining}} days remaining)
                     </p>
                   </div>
                 </div>
@@ -85,8 +85,8 @@
                   v-model="form.reason"
                   rows="3"
                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  :class="{ 'border-red-300': form.errors.reason }"
                   placeholder="Please provide a reason for these adjustments..."
-                  required
                 ></textarea>
                 <p class="mt-1 text-sm text-red-600" v-if="form.errors.reason">
                   {{ form.errors.reason }}
@@ -118,12 +118,13 @@
                 <div v-for="log in auditLogs" :key="log.id" class="bg-white p-4 rounded-lg border border-gray-200">
                   <div class="flex justify-between items-start">
                     <div>
-                      <p class="text-sm font-medium text-gray-900">{{ log.adjusted_by }}</p>
+                      <p class="text-sm font-medium text-gray-900">{{ log.adjusted_by.firstname }} {{ log.adjusted_by.lastname }} {{ log.adjusted_by.email }}</p>
                       <p class="text-sm text-gray-500">{{ log.reason }}</p>
                     </div>
                     <p class="text-sm text-gray-500">{{ formatDate(log.created_at) }}</p>
                   </div>
                   <div class="mt-2 text-sm text-gray-500">
+                    <p class="font-medium text-gray-900">{{ log.leave_balance.leave_type.name }}</p>
                     <p>Previous Balance: {{ log.previous_balance }}</p>
                     <p>New Balance: {{ log.new_balance }}</p>
                   </div>
@@ -137,6 +138,18 @@
         </div>
       </div>
     </div>
+
+    <!-- Confirmation Modal -->
+    <ConfirmationModal
+      :show="showConfirmModal"
+      type="warning"
+      title="Update Leave Balances"
+      message="Are you sure you want to update these leave balances?"
+      confirm-text="Yes, Update"
+      cancel-text="No, Cancel"
+      @close="closeConfirmModal"
+      @confirm="confirmSubmit"
+    />
   </AppLayout>
 </template>
 
@@ -144,7 +157,9 @@
 import { Link, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { useDateFormat } from '@/composables/useDateFormat'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import ConfirmationModal from '@/components/ConfirmationModal.vue'
+//import { useToast } from '@/composables/useToast'
 
 const props = defineProps({
   staff: Object,
@@ -152,6 +167,9 @@ const props = defineProps({
 })
 
 const { formatDate } = useDateFormat()
+// const toast = useToast()
+
+const showConfirmModal = ref(false)
 
 const form = useForm({
   balances: props.staff.leave_balances.map(balance => ({
@@ -159,6 +177,7 @@ const form = useForm({
     total_entitled_days: balance.total_entitled_days,
     days_taken: balance.days_taken,
     days_carried_forward: balance.days_carried_forward,
+    days_remaining: balance.days_remaining
   })),
   reason: '',
 })
@@ -169,14 +188,47 @@ const breadcrumbs = computed(() => [
   { id: 3, title: 'Leave Balances', path: '' }
 ])
 
-const submit = () => {
-  if (confirm('Are you sure you want to update these leave balances?')) {
-    form.post(route('staff.leave-balances.update', props.staff.id), {
-      preserveScroll: true,
-      onSuccess: () => {
-        form.reason = ''
-      },
-    })
+const validateForm = () => {
+  let isValid = true;
+  form.errors = {};
+
+  // Validate reason
+  if (!form.reason.trim()) {
+    form.errors.reason = 'Please provide a reason for the adjustment';
+    isValid = false;
+  } else if (form.reason.trim().length < 10) {
+    form.errors.reason = 'Reason must be at least 10 characters long';
+    isValid = false;
   }
-}
+
+  return isValid;
+};
+
+const submit = () => {
+  if (!validateForm()) {
+    return;
+  }
+  showConfirmModal.value = true;
+};
+
+const closeConfirmModal = () => {
+  showConfirmModal.value = false;
+};
+
+const confirmSubmit = () => {
+  form.post(route('staff.leave-balances.update', props.staff.id), {
+    preserveScroll: true,
+    onSuccess: () => {
+      form.reason = '';
+      // toast.success('Leave balances updated successfully');
+      // Refresh the page to show updated data
+      window.location.reload();
+    },
+    onError: (errors) => {
+      //toast.error('Failed to update leave balances');
+      console.error('Form submission errors:', errors);
+    },
+  });
+  closeConfirmModal();
+};
 </script> 

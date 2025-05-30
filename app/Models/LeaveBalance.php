@@ -36,4 +36,8 @@ class LeaveBalance extends Model
     {
         return $this->belongsTo(LeaveType::class);
     }
+
+    public function auditLogs(){
+        return $this->hasMany(LeaveBalanceAuditLog::class);
+    }
 } 

@@ -176,7 +176,7 @@ class NavigationSeeder extends Seeder
         Navigation::create([
             'path' => 'settings',
             'title' => 'Settings',
-            'roles' => ['admin', 'supervisor', 'hod', 'hr'],
+            'roles' => ['admin', 'employee','supervisor', 'hod', 'hr'],
             'icon' => 'settings',
             'order' => 6,
             'is_dropdown' => false
@@ -186,7 +186,7 @@ class NavigationSeeder extends Seeder
         Navigation::create([
             'path' => 'profile',
             'title' => 'Profile',
-            'roles' => ['admin', 'supervisor', 'hod', 'hr'],
+            'roles' => ['admin','employee', 'supervisor', 'hod', 'hr'],
             'icon' => 'user',
             'order' => 7,
             'is_dropdown' => false

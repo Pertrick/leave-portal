@@ -10,6 +10,7 @@ import { initializeTheme } from './composables/useAppearance';
 import Toast from 'vue-toastification';
 import { ToastPlugin } from './plugins/toast';
 import 'vue-toastification/dist/index.css';
+import { vClickOutside } from './directives/click-outside';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -40,6 +41,7 @@ createInertiaApp({
                 newestOnTop: true,
             })
             .use(ToastPlugin)
+            .directive('click-outside', vClickOutside)
             .mount(el);
     },
     progress: {

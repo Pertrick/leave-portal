@@ -46,12 +46,11 @@ class DashboardController extends Controller
             ->get()
             ->map(function ($balance) {
                 // Get the entitlement for this user's level and leave type
-                $entitlement = $balance->leaveType->leaveEntitlements->first();
-
+              //  $entitlement = $balance->leaveType->leaveEntitlements->first();
                 return [
                     'type' => $balance->leaveType->name,
                     'used' => $balance->days_taken,
-                    'total' => $entitlement ? $entitlement->days_per_year : 0,
+                    'total' => $balance->total_entitled_days,
                     'remaining' => $balance->days_remaining,
                     'color' => $this->getLeaveTypeColor($balance->leaveType->name)
                 ];
@@ -168,7 +167,8 @@ class DashboardController extends Controller
                 ->exists();
             
             // Check for holidays
-            $isHoliday = Holiday::whereDate('date', $currentDate)->exists();
+            $holiday = Holiday::whereDate('date', $currentDate)->first();
+            $isHoliday = $holiday !== null;
             
             $calendarDays->push([
                 'date' => $currentDate->format('Y-m-d'),
@@ -177,6 +177,7 @@ class DashboardController extends Controller
                 'isToday' => $isToday,
                 'hasLeave' => $hasLeave,
                 'isHoliday' => $isHoliday,
+                'holidayName' => $holiday ? $holiday->name : null,
             ]);
             
             $currentDate->addDay();

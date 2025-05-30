@@ -117,9 +117,15 @@ const calendarDays = computed(() => {
         // Check for leaves
         const hasLeave = props.recentRequests.some(request => {
             const startDate = new Date(request.start_date);
+            startDate.setHours(0, 0, 0, 0);
             const endDate = new Date(request.start_date);
+            endDate.setHours(0, 0, 0, 0);
             endDate.setDate(endDate.getDate() + request.days - 1);
-            return currentDate >= startDate && currentDate <= endDate && request.status === 'approved';
+            
+            const compareDate = new Date(currentDate);
+            compareDate.setHours(0, 0, 0, 0);
+            
+            return compareDate >= startDate && compareDate <= endDate && request.status === 'approved';
         });
         
         days.push({
@@ -178,6 +184,47 @@ const getLeaveTypeIcon = (type: string) => {
     if (typeLower.includes('unpaid')) return 'bg-cyan-100 text-cyan-600';
     return 'bg-indigo-100 text-indigo-600';
 };
+
+const getDayTitle = (day: any) => {
+    const date = new Date(day.date);
+    const formattedDate = date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+    
+    let title = formattedDate;
+    
+    if (day.hasLeave) {
+        const leave = props.recentRequests.find(request => {
+            const startDate = new Date(request.start_date);
+            startDate.setHours(0, 0, 0, 0);
+            const endDate = new Date(request.start_date);
+            endDate.setHours(0, 0, 0, 0);
+            endDate.setDate(endDate.getDate() + request.days - 1);
+            
+            const compareDate = new Date(day.date);
+            compareDate.setHours(0, 0, 0, 0);
+            
+            return compareDate >= startDate && compareDate <= endDate && request.status === 'approved';
+        });
+        
+        if (leave) {
+            title += `\nLeave Type: ${leave.type}\nDuration: ${leave.days} days`;
+        }
+    }
+    
+    if (day.isHoliday) {
+        title += '\nHoliday';
+    }
+    
+    if (day.isSunday || day.isSaturday) {
+        title += '\nWeekend';
+    }
+    
+    return title;
+};
 </script>
 
 <template>
@@ -188,7 +235,7 @@ const getLeaveTypeIcon = (type: string) => {
             <!-- Quick Stats -->
             <div class="grid auto-rows-min gap-4 md:grid-cols-3">
                 <!-- Leave Balance Card -->
-                <div class="relative overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-indigo-50 to-white p-6 shadow-sm dark:from-indigo-900/20 dark:to-gray-800 dark:border-gray-700">
+                <div class="relative overflow-hidden rounded-xl border border-gray-200 bg-sky-50/30 p-6 shadow-sm dark:bg-sky-900/10 dark:border-gray-700">
                     <div class="flex items-center">
                         <div class="flex-shrink-0 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 p-3">
                             <Calendar class="h-6 w-6 text-white" />
@@ -212,7 +259,7 @@ const getLeaveTypeIcon = (type: string) => {
                 </div>
 
                 <!-- Pending Requests Card -->
-                <div class="relative overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-amber-50 to-white p-6 shadow-sm dark:from-amber-900/20 dark:to-gray-800 dark:border-gray-700">
+                <div class="relative overflow-hidden rounded-xl border border-gray-200 bg-blue-50/30 p-6 shadow-sm dark:bg-blue-900/10 dark:border-gray-700">
                     <div class="flex items-center">
                         <div class="flex-shrink-0 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 p-3">
                             <AlertCircle class="h-6 w-6 text-white" />
@@ -236,7 +283,7 @@ const getLeaveTypeIcon = (type: string) => {
                 </div>
 
                 <!-- Upcoming Leaves Card -->
-                <div class="relative overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm dark:from-emerald-900/20 dark:to-gray-800 dark:border-gray-700">
+                <div class="relative overflow-hidden rounded-xl border border-gray-200 bg-cyan-50/30 p-6 shadow-sm dark:bg-cyan-900/10 dark:border-gray-700">
                     <div class="flex items-center">
                         <div class="flex-shrink-0 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 p-3">
                             <CalendarCheck class="h-6 w-6 text-white" />
@@ -263,7 +310,7 @@ const getLeaveTypeIcon = (type: string) => {
             <!-- Breakdown Section -->
             <div class="grid gap-4 md:grid-cols-3">
                 <!-- Leave Type Distribution -->
-                <div class="overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-indigo-50 to-white shadow-sm dark:from-indigo-900/20 dark:to-gray-800 dark:border-gray-700">
+                <div class="overflow-hidden rounded-xl border border-gray-200 bg-sky-50/30 shadow-sm dark:bg-sky-900/10 dark:border-gray-700">
                     <div class="p-6">
                         <div class="flex items-center justify-between">
                             <h3 class="text-lg font-medium text-indigo-900 dark:text-indigo-100">Leave Distribution</h3>
@@ -306,7 +353,7 @@ const getLeaveTypeIcon = (type: string) => {
                 </div>
 
                 <!-- Leave Type Usage Analysis -->
-                <div class="overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-emerald-50 to-white shadow-sm dark:from-emerald-900/20 dark:to-gray-800 dark:border-gray-700">
+                <div class="overflow-hidden rounded-xl border border-gray-200 bg-cyan-50/30 shadow-sm dark:bg-cyan-900/10 dark:border-gray-700">
                     <div class="p-6">
                         <div class="flex items-center justify-between">
                             <h3 class="text-lg font-medium text-emerald-900 dark:text-emerald-100">Leave Usage Analysis</h3>
@@ -392,7 +439,7 @@ const getLeaveTypeIcon = (type: string) => {
                 </div>
 
                 <!-- Status Overview -->
-                <div class="overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-amber-50 to-white shadow-sm dark:from-amber-900/20 dark:to-gray-800 dark:border-gray-700">
+                <div class="overflow-hidden rounded-xl border border-gray-200 bg-blue-50/30 shadow-sm dark:bg-blue-900/10 dark:border-gray-700">
                     <div class="p-6">
                         <div class="flex items-center justify-between">
                             <h3 class="text-lg font-medium text-amber-900 dark:text-amber-100">Status Overview</h3>
@@ -459,7 +506,8 @@ const getLeaveTypeIcon = (type: string) => {
                                             'bg-emerald-50 dark:bg-emerald-900/20': day.isHoliday,
                                             'bg-red-50 dark:bg-red-900/20': day.isSunday && day.isCurrentMonth,
                                             'bg-yellow-50 dark:bg-yellow-900/20': day.isSaturday && day.isCurrentMonth
-                                        }">
+                                        }"
+                                        :title="getDayTitle(day)">
                                         <span class="text-sm" :class="{
                                             'text-gray-400 dark:text-gray-500': !day.isCurrentMonth,
                                             'font-semibold': day.isToday,

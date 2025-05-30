@@ -108,6 +108,8 @@ class User extends Authenticatable
         return $this->hasMany(LeaveBalance::class);
     }
 
+
+
     public function getFullNameAttribute(): string
     {
         return "{$this->firstname} {$this->lastname}";

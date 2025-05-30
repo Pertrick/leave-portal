@@ -73,7 +73,7 @@ defineExpose({});
                     <!-- Dropdown Menu -->
                     <div
                         v-show="isUserMenuOpen"
-                        class="absolute right-0 mt-2 w-72 rounded-lg bg-background py-2 shadow-lg ring-1 ring-border"
+                        class="absolute right-0 mt-2 w-72 rounded-lg bg-background py-2 shadow-lg ring-1 ring-border z-50"
                         role="menu"
                         aria-orientation="vertical"
                         aria-labelledby="user-menu"
