@@ -18,7 +18,7 @@
               <div v-for="(balance, index) in form.balances" :key="balance.id" class="bg-gray-50 p-4 rounded-lg">
                 <div class="flex justify-between items-start mb-4">
                   <div>
-                    <h3 class="text-base font-semibold text-gray-900">{{ balance.leave_type?.name }}</h3>
+                    <h3 class="text-base font-semibold text-gray-900">{{ balance.leave_type }}</h3>
                     <p class="text-sm text-gray-500">Year: {{ balance.year }}</p>
                   </div>
                   <div class="text-right">
@@ -174,10 +174,12 @@ const showConfirmModal = ref(false)
 const form = useForm({
   balances: props.staff.leave_balances.map(balance => ({
     id: balance.id,
+    leave_type : balance.leave_type.name,
     total_entitled_days: balance.total_entitled_days,
     days_taken: balance.days_taken,
     days_carried_forward: balance.days_carried_forward,
-    days_remaining: balance.days_remaining
+    days_remaining: balance.days_remaining,
+    year : balance.year
   })),
   reason: '',
 })

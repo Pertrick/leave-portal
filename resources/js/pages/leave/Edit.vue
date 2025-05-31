@@ -194,7 +194,7 @@
                     </div>
                     <FileInput
                       id="attachment"
-                      v-model="form.attachment"
+                      @change="handleFileChange"
                       class="block w-full"
                       accept=".pdf,.jpg,.jpeg,.png"
                     />
@@ -224,7 +224,7 @@
                 <button
                   type="submit"
                   class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150"
-                  :disabled="form.processing"
+                  :disabled="isSubmitDisabled"
                 >
                   Submit Application
                 </button>
@@ -264,11 +264,6 @@ const props = defineProps({
   }
 })
 
-
-const durationLoading = ref(false)
-
-console.log(props.leave)
-
 const form = useForm({
   leave_type_id: props.leave.leave_type_id,
   start_date: props.leave.start_date,
@@ -279,17 +274,16 @@ const form = useForm({
   replacement_staff_phone: props.leave.replacement_staff_phone || '',
   attachment: null,
   current_attachment: props.leave.attachment,
-  status: props.status,
-  calendar_days: props.leave.calendar_days || 0,
-  working_days: props.leave.working_days || 0
+  _method: 'PUT'
 })
 
 const minDate = new Date().toISOString().split('T')[0]
 
+const durationLoading = ref(false)
+
 const duration = computed(() => {
   if (!form.start_date || !form.end_date) return 0
   return `${form.working_days} working days (${form.calendar_days} calendar days)`
-
 })
 
 const workingDays = computed(() => {
@@ -307,14 +301,33 @@ const selectedLeaveType = computed(() => {
   return props.leaveTypes.find(type => type.id === parseInt(form.leave_type_id))
 })
 
-const removeAttachment = () => {
-  form.current_attachment = null
-  form.attachment = null
+const handleFileChange = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    // Create a new File object to ensure it's fresh
+    form.attachment = new File([file], file.name, {
+      type: file.type,
+      lastModified: file.lastModified
+    })
+  }
 }
+
+const removeAttachment = () => {
+  form.attachment = null
+  form.current_attachment = null
+}
+
+const isSubmitDisabled = computed(() => {
+  return form.processing || 
+         !form.start_date || 
+         !form.end_date || 
+         !form.leave_type_id ||
+         (selectedLeaveBalance.value && workingDays.value > selectedLeaveBalance.value.days_remaining)
+})
 
 const submit = () => {
   // Validate attachment for medical leave types
-  if (selectedLeaveType.value?.requires_medical_proof && !form.attachment && !form.current_attachment) {
+  if (selectedLeaveType.value?.requires_medical_proof && !form.attachment && !props.leave.attachment) {
     form.errors.attachment = 'Medical proof is required for this leave type.'
     return
   }
@@ -335,12 +348,14 @@ const submit = () => {
     return
   }
 
-  // If no new attachment is uploaded, keep the current one
-  if (!form.attachment) {
-    form.attachment = form.current_attachment
+  // Validate leave balance
+  if (selectedLeaveBalance.value && workingDays.value > selectedLeaveBalance.value.days_remaining) {
+    proxy.$toast.error(`Insufficient leave balance. You have ${selectedLeaveBalance.value.days_remaining} days remaining but requested ${workingDays.value} days.`)
+    return
   }
 
-  form.put(route('leaves.update', props.leave.uuid), {
+  // Use Inertia's form handling
+  form.post(route('leaves.update', props.leave.uuid), {
     preserveScroll: true,
     onSuccess: () => {
       if (flash.value?.success) {
@@ -359,11 +374,7 @@ const submit = () => {
 const saveAsDraft = () => {
   form.status = 'draft'
   
-  // If no new attachment is uploaded, keep the current one
-  if (!form.attachment) {
-    form.attachment = form.current_attachment
-  }
-
+  // Use Inertia's form handling
   form.post(route('leaves.draft', props.leave.uuid), {
     preserveScroll: true,
     onSuccess: () => {
@@ -388,8 +399,6 @@ watch(() => form.leave_type_id, (newTypeId) => {
   }
 })
 
-// Watch for date changes to trigger backend calculation
-
 const calculateDuration = debounce((start, end, type) => {
   durationLoading.value = true
   axios.post(route('leaves.calculate-duration'), {
@@ -405,9 +414,9 @@ const calculateDuration = debounce((start, end, type) => {
     proxy.$toast.error(error.response?.data?.message || 'Failed to calculate leave duration')
     console.error(error)
   })
-  .finally(() =>  {
-      durationLoading.value = false
-    })
+  .finally(() => {
+    durationLoading.value = false
+  })
 }, 300)
 
 watch([() => form.start_date, () => form.end_date, () => form.leave_type_id],
@@ -418,4 +427,20 @@ watch([() => form.start_date, () => form.end_date, () => form.leave_type_id],
   }
 )
 
-</script> 
+const showConfirmModal = ref(false)
+const confirmMessage = ref('')
+const confirmAction = ref(null)
+
+const handleConfirmAction = () => {
+  if (confirmAction.value) {
+    confirmAction.value()
+  }
+  showConfirmModal.value = false
+}
+
+const confirmDelete = (message, action) => {
+  confirmMessage.value = message
+  confirmAction.value = action
+  showConfirmModal.value = true
+}
+</script>

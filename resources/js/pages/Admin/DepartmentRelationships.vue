@@ -625,6 +625,30 @@
         </form>
       </div>
     </Modal>
+
+    <!-- Confirmation Modal -->
+    <Modal :show="showConfirmModal" @close="showConfirmModal = false">
+      <div class="p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Confirm Action</h2>
+        <p class="text-sm text-gray-600 mb-4">{{ confirmMessage }}</p>
+        <div class="mt-6 flex justify-end space-x-3">
+          <button
+            type="button"
+            @click="showConfirmModal = false"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            @click="handleConfirmAction"
+            class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </Modal>
   </AppLayout>
 </template>
 
@@ -672,6 +696,9 @@ const showAssignSupervisorModal = ref(false)
 const showViewUsersModal = ref(false)
 const selectedSupervisor = ref(null)
 const loadingUsers = ref(false)
+const showConfirmModal = ref(false)
+const confirmMessage = ref('')
+const confirmAction = ref(null)
 
 const newHead = useForm({
   user_id: null,
@@ -752,18 +779,34 @@ const assignHead = () => {
   })
 }
 
-const deactivateHead = (head) => {
-  if (confirm('Are you sure you want to deactivate this department head?')) {
-    router.delete(route('admin.departments.head.deactivate', selectedDepartment.value), {
-      onSuccess: () => {
-        window.location.reload()
-      },
-      onError: (errors) => {
-        console.error('Error deactivating head:', errors)
-        alert('Failed to deactivate department head. Please try again.')
-      }
-      })
+const handleConfirmAction = () => {
+  if (confirmAction.value) {
+    confirmAction.value()
   }
+  showConfirmModal.value = false
+}
+
+const confirmDelete = (message, action) => {
+  confirmMessage.value = message
+  confirmAction.value = action
+  showConfirmModal.value = true
+}
+
+const deactivateHead = (head) => {
+  confirmDelete(
+    'Are you sure you want to deactivate this department head?',
+    () => {
+      router.delete(route('admin.departments.head.deactivate', selectedDepartment.value), {
+        onSuccess: () => {
+          window.location.reload()
+        },
+        onError: (errors) => {
+          console.error('Error deactivating head:', errors)
+          alert('Failed to deactivate department head. Please try again.')
+        }
+      })
+    }
+  )
 }
 
 const assignSupervisor = () => {
@@ -805,17 +848,20 @@ const updateSupervisor = (supervisor) => {
 }
 
 const deactivateSupervisor = (supervisor) => {
-  if (confirm('Are you sure you want to deactivate this supervisor?')) {
-    router.delete(route('admin.departments.supervisors.deactivate', supervisor.id), {
-      onSuccess: () => {
-        window.location.reload()
-      },
-      onError: (errors) => {
-        console.error('Error deactivating supervisor:', errors)
-        alert('Failed to deactivate supervisor. Please try again.')
-      }
-    })
-  }
+  confirmDelete(
+    'Are you sure you want to deactivate this supervisor?',
+    () => {
+      router.delete(route('admin.departments.supervisors.deactivate', supervisor.id), {
+        onSuccess: () => {
+          window.location.reload()
+        },
+        onError: (errors) => {
+          console.error('Error deactivating supervisor:', errors)
+          alert('Failed to deactivate supervisor. Please try again.')
+        }
+      })
+    }
+  )
 }
 
 const viewSupervisedUsers = async (supervisor) => {

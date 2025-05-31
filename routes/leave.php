@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\Leave\LeaveController;
-use App\Http\Controllers\Leave\LeaveApprovalController;
-use App\Http\Controllers\Leave\LeaveTypeController;
-use App\Http\Controllers\Leave\LeaveBalanceController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Leave\LeaveController;
+
+use App\Http\Controllers\Admin\LeaveTypeController;
+use App\Http\Controllers\Leave\LeaveApprovalController;
 
 Route::middleware(['auth'])->group(function () {
     // Leave Applications
@@ -26,7 +26,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/leave/approvals', [LeaveApprovalController::class, 'index'])->name('leave.approvals.index');
         Route::get('/leave/approvals/{leave}', [LeaveApprovalController::class, 'show'])->name('leave.approvals.show');
         Route::post('/leave/approvals/{leave}/approve', [LeaveApprovalController::class, 'approve'])->name('leave.approvals.approve');
-        Route::post('/leave/approvals/{leave}/reject', [LeaveApprovalController::class, 'reject'])->name('leave.approvals.reject');
+        Route::post('/leave/approvals/{leave}/reject', action: [LeaveApprovalController::class, 'reject'])->name('leave.approvals.reject');
     
 
     // Leave Types
@@ -40,12 +40,5 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Leave Balances
-    Route::middleware(['can:manage-leave'])->group(function () {
-        Route::get('/leave/balances', [LeaveBalanceController::class, 'index'])->name('leave.balances.index');
-        Route::get('/leave/balances/create', [LeaveBalanceController::class, 'create'])->name('leave.balances.create');
-        Route::post('/leave/balances', [LeaveBalanceController::class, 'store'])->name('leave.balances.store');
-        Route::get('/leave/balances/{leaveBalance}/edit', [LeaveBalanceController::class, 'edit'])->name('leave.balances.edit');
-        Route::put('/leave/balances/{leaveBalance}', [LeaveBalanceController::class, 'update'])->name('leave.balances.update');
-        Route::delete('/leave/balances/{leaveBalance}', [LeaveBalanceController::class, 'destroy'])->name('leave.balances.destroy');
-    });
+
 }); 

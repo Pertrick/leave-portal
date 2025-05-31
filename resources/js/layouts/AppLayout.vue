@@ -4,7 +4,7 @@ import { computed } from 'vue';
 import { type NavigationItem } from '@/types';
 import Sidebar from '@/components/Sidebar.vue';
 import Header from '@/components/Header.vue';
-import Alert from '@/Components/Alert.vue';
+import Alert from '@/components/Alert.vue';
 
 const props = defineProps<{
     title?: string;
@@ -47,17 +47,19 @@ const currentTitle = computed(() => {
 <template>
     <div class="min-h-screen bg-background">
         <Alert />
-        <div class="flex">
-            <Sidebar :navigation="navigation" />
+        <div class="flex h-screen overflow-hidden">
+            <div class="w-64 flex-shrink-0">
+                <Sidebar :navigation="navigation" class="h-screen" />
+            </div>
             
-            <div class="flex-1 flex flex-col min-h-screen">
+            <div class="flex-1 flex flex-col h-screen overflow-hidden">
                 <Header :breadcrumbs="breadcrumbs" :title="currentTitle">
                     <template #actions>
                         <slot name="header-actions" />
                     </template>
                 </Header>
                 
-                <main class="flex-1">
+                <main class="flex-1 overflow-y-auto">
                     <slot />
                 </main>
             </div>

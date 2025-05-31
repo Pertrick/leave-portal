@@ -9,14 +9,21 @@ use App\Models\Location;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Department extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'name',
         'location_id',
-        'supervisor_id',
-        'hod_id'
+        'description',
+        'status',
+    ];
+
+    protected $casts = [
+        'status' => 'boolean',
     ];
 
     public function location(): BelongsTo

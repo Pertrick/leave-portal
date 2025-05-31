@@ -3,13 +3,15 @@
 use App\Models\User;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\HolidayController;
-use App\Http\Controllers\SupervisorController;
-use App\Http\Controllers\DepartmentHeadController;
-use App\Http\Controllers\Admin\DepartmentRelationshipController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\SupervisorController;
+use App\Http\Controllers\Admin\HolidayController;
+use App\Http\Controllers\DepartmentHeadController;
+use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\LeaveBalanceController;
 use App\Http\Controllers\Admin\LeaveApplicationController;
+use App\Http\Controllers\Admin\DepartmentRelationshipController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
@@ -24,7 +26,7 @@ Route::middleware(['auth'])->group(function () {
             'user' => auth()->user()->load([
                 'department.activeHead',
                 'userLevel',
-                'supervisor',
+                'supervisor.supervisor',
                 'leaveBalances.leaveType'
             ]),
         ]);
@@ -48,6 +50,13 @@ Route::middleware(['auth'])->group(function () {
         // Leave Reports
         Route::get('/leave/report', [App\Http\Controllers\Admin\LeaveReportController::class, 'index'])->name('leave.report');
         Route::get('/leave/export', [App\Http\Controllers\Admin\LeaveReportController::class, 'export'])->name('leave.export');
+
+        // Department Management
+        Route::get('/departments', [DepartmentController::class, 'index'])->name('departments.index');
+        Route::post('/departments', [DepartmentController::class, 'store'])->name('departments.store');
+        Route::put('/departments/{department}', [DepartmentController::class, 'update'])->name('departments.update');
+        Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
+        Route::put('/departments/{department}/toggle-status', [DepartmentController::class, 'toggleStatus'])->name('departments.toggle-status');
     });
 });
 
@@ -92,6 +101,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('staff.leave-balances');
     Route::post('/staff/{staff}/leave-balances', [StaffController::class, 'updateLeaveBalances'])
         ->name('staff.leave-balances.update');
+
+
+        Route::middleware(['role:admin|hr'])->group(function () {
+            Route::get('/leave/balances', [LeaveBalanceController::class, 'index'])->name('leave.balances.index');
+            Route::get('/leave/balances/export', [LeaveBalanceController::class, 'export'])->name('leave.balances.export');
+        });
+
+    // Admin routes
+    Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
+        // Dashboard
+        Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/api/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index']);
+
+        // ... existing admin routes ...
+    });
 });
 
 require __DIR__.'/settings.php';

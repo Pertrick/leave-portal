@@ -15,19 +15,16 @@ class DepartmentSeeder extends Seeder
         $departments = [
             [
                 'name' => 'Human Resources',
-                'location_id' => $headOffice->id
             ],
             [
                 'name' => 'Information Technology',
                 'location_id' => $headOffice->id
             ],
             [
-                'name' => 'Finance',
-                'location_id' => $headOffice->id
+                'name' => 'Finance'
             ],
             [
                 'name' => 'Marketing',
-                'location_id' => $headOffice->id
             ],
             [
                 'name' => 'Operations',
@@ -43,7 +40,6 @@ class DepartmentSeeder extends Seeder
             ],
             [
                 'name' => 'Research and Development',
-                'location_id' => $headOffice->id
             ],
         ];
 

@@ -194,7 +194,7 @@ class User extends Authenticatable
 
     public function activeSupervisors()
     {
-        return $this->supervisors()->where('is_active', true);
+        return $this->supervisor()->where('is_active', true);
     }
 
     public function primarySupervisor()

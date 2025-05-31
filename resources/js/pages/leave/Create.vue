@@ -87,6 +87,17 @@
                 <TextInput id="start_date" type="date" v-model="form.start_date" class="mt-1 block w-full" required
                   :min="minDate" @change="updateDateRange" />
                 <InputError :message="form.errors.start_date" class="mt-2" />
+                <div v-if="isSubmitDisabled" class="mt-1 text-sm text-red-600">
+                  <p v-if="!form.start_date || !form.end_date || !form.leave_type_id">
+                    Please fill in all required fields (Leave Type, Start Date, and End Date)
+                  </p>
+                  <p v-else-if="pendingLeaves > 0">
+                    You have {{ pendingLeaves }} pending leave {{ pendingLeaves === 1 ? 'request' : 'requests' }}. Please wait for approval.
+                  </p>
+                  <p v-else-if="selectedLeaveBalance && workingDays > selectedLeaveBalance.days_remaining">
+                    Insufficient leave balance. You have {{ selectedLeaveBalance.days_remaining }} days remaining but requested {{ workingDays }} days.
+                  </p>
+                </div>
               </div>
 
               <!-- End Date -->
@@ -294,7 +305,8 @@ const isSubmitDisabled = computed(() => {
          !form.start_date || 
          !form.end_date || 
          !form.leave_type_id || 
-         props.pendingLeaves > 0
+         props.pendingLeaves > 0 ||
+         (selectedLeaveBalance.value && workingDays.value > selectedLeaveBalance.value.days_remaining)
 })
 
 const submit = () => {
@@ -314,6 +326,12 @@ const submit = () => {
 
   if (!form.replacement_staff_phone) {
     form.errors.replacement_staff_phone = 'Please provide a valid replacement phone number.'
+    return
+  }
+
+  // Validate leave balance
+  if (selectedLeaveBalance.value && workingDays.value > selectedLeaveBalance.value.days_remaining) {
+    proxy.$toast.error(`Insufficient leave balance. You have ${selectedLeaveBalance.value.days_remaining} days remaining but requested ${workingDays.value} days.`)
     return
   }
 

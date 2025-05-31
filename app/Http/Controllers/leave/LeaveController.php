@@ -10,6 +10,7 @@ use Inertia\Response;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\RedirectResponse;
 use App\Services\LeaveApplicationService;
 use App\Http\Requests\Leave\SaveDraftRequest;
@@ -78,8 +79,22 @@ class LeaveController extends Controller
             return redirect()->route('leaves.index')
                 ->with('success', 'Leave application submitted successfully.');
         }
+        catch(\InvalidArgumentException $ex) {
+            // Handle validation errors from the service
+            return back()
+                ->withInput()
+                ->with('error', $ex->getMessage());
+        }
         catch(Exception $ex) {
-            return back()->with('error', $ex->getMessage());
+            // Log unexpected errors
+            Log::error('Leave application creation failed: ' . $ex->getMessage(), [
+                'user_id' => Auth::id(),
+                'exception' => $ex
+            ]);
+            
+            return back()
+                ->withInput()
+                ->with('error', 'An unexpected error occurred. Please try again later.');
         }
     }
 
@@ -131,6 +146,7 @@ class LeaveController extends Controller
 
     public function update(StoreLeaveRequest $request, Leave $leave): RedirectResponse
     {
+        
         try {
             $user = Auth::guard('web')->user();
             abort_if($user->id != $leave->user_id, 403, 'You are not authorized to update this leave application.');
@@ -145,8 +161,23 @@ class LeaveController extends Controller
             return redirect()->route('leaves.index')
                 ->with('success', 'Leave application updated successfully.');
         }
+        catch(\InvalidArgumentException $ex) {
+            // Handle validation errors from the service
+            return back()
+                ->withInput()
+                ->with('error', $ex->getMessage());
+        }
         catch(Exception $ex) {
-            return back()->with('error', $ex->getMessage());
+            // Log unexpected errors
+            Log::error('Leave application update failed: ' . $ex->getMessage(), [
+                'user_id' => Auth::id(),
+                'leave_id' => $leave->id,
+                'exception' => $ex
+            ]);
+            
+            return back()
+                ->withInput()
+                ->with('error', 'An unexpected error occurred. Please try again later.');
         }
     }
 

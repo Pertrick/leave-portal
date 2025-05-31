@@ -30,6 +30,31 @@ class LeaveApplicationService
     }
 
     /**
+     * Validate user's supervisor and HOD assignments
+     *
+     * @param User $user
+     * @throws \InvalidArgumentException
+     */
+    private function validateUserAssignments(User $user): void
+    {
+        // Check if user has an active supervisor
+        $hasSupervisor = $user->supervisors()
+            ->where('is_active', true)
+            ->exists();
+
+        if (!$hasSupervisor) {
+            throw new \InvalidArgumentException('You do not have an active supervisor assigned. Please contact HR.');
+        }
+
+        // Check if user's department has an active head
+        $hasHOD = $user->department && $user->department->activeHead()->exists();
+
+        if (!$hasHOD) {
+            throw new \InvalidArgumentException('Your department does not have an active head assigned. Please contact HR.');
+        }
+    }
+
+    /**
      * Create a new leave application
      *
      * @param array $data
@@ -42,6 +67,9 @@ class LeaveApplicationService
         $endDate = Carbon::parse($data['end_date']);
         $leaveType = LeaveType::findOrFail($data['leave_type_id']);
 
+        // Validate user assignments
+        $this->validateUserAssignments($user);
+
         // Validate dates
         $this->validateLeaveDates($startDate, $endDate, $user->location_id);
 
@@ -51,9 +79,11 @@ class LeaveApplicationService
         // Calculate working days (excluding weekends and holidays)
         $workingDays = $this->calculateWorkingDays($startDate, $endDate, $leaveType);
 
+        // Validate leave balance
+        $this->validateLeaveBalance($user, $data['leave_type_id'], $workingDays);
+
         // Get holidays in the date range
         $holidays = $this->getHolidaysBetween($startDate, $endDate);
-
 
         try {
             DB::beginTransaction();
@@ -147,11 +177,13 @@ class LeaveApplicationService
      */
     public function update(Leave $leave, array $data): Leave
     {
-
         $startDate = Carbon::parse($data['start_date']);
         $endDate = Carbon::parse($data['end_date']);
         $leaveType = LeaveType::findOrFail($data['leave_type_id']);
         $user = Auth::user();
+
+        // Validate user assignments
+        $this->validateUserAssignments($user);
 
         // Validate dates
         $this->validateLeaveDates($startDate, $endDate, $user->location_id);
@@ -161,6 +193,9 @@ class LeaveApplicationService
 
         // Calculate working days (excluding weekends and holidays)
         $workingDays = $this->calculateWorkingDays($startDate, $endDate, $leaveType);
+
+        // Validate leave balance
+        $this->validateLeaveBalance($user, $data['leave_type_id'], $workingDays);
 
         // Get holidays in the date range
         $holidays = $this->getHolidaysBetween($startDate, $endDate);
@@ -717,5 +752,35 @@ class LeaveApplicationService
             ])
             ->latest()
             ->paginate(10);
+    }
+
+    /**
+     * Validate leave balance
+     *
+     * @param User $user
+     * @param int $leaveTypeId
+     * @param int $workingDays
+     * @throws \InvalidArgumentException
+     */
+    private function validateLeaveBalance(User $user, int $leaveTypeId, int $workingDays): void
+    {
+        $leaveBalance = LeaveBalance::where('user_id', $user->id)
+            ->where('leave_type_id', $leaveTypeId)
+            ->where('year', now()->year)
+            ->first();
+
+        if (!$leaveBalance) {
+            throw new \InvalidArgumentException('No leave balance found for this leave type.');
+        }
+
+        if ($workingDays > $leaveBalance->days_remaining) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'Insufficient leave balance. You have %d days remaining but requested %d days.',
+                    $leaveBalance->days_remaining,
+                    $workingDays
+                )
+            );
+        }
     }
 } 
