@@ -1,237 +1,276 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Calendar, Clock, CalendarCheck, Users, AlertCircle, PieChart, BarChart, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { useDateFormat } from '@/composables/useDateFormat';
 
-const props = defineProps<{
-    totalAvailableDays: number;
-    pendingRequests: number;
-    upcomingLeaves: number;
-    teamMembers: Array<{
-        id: number;
-        name: string;
-        designation: string;
-        avatar: string | null;
-        isOnLeave: boolean;
-        leaveDetails?: {
-            type: string;
-            start_date: string;
-            end_date: string;
-            days: number;
-        };
-    }>;
-    recentRequests: Array<{
-        id: number;
-        type: string;
-        days: number;
-        start_date: string;
-        status: 'pending' | 'approved' | 'rejected';
-    }>;
-    calendarDays: Array<{
-        date: string;
-        day: number;
-        isCurrentMonth: boolean;
-        isToday: boolean;
-        hasLeave: boolean;
-        isHoliday: boolean;
-    }>;
-    leaveDistribution: Array<{
-        type: string;
-        used: number;
-        total: number;
-        remaining: number;
-        color: string;
-    }>;
-    monthlyTrends: Array<{
-        month: string;
-        leaves: number;
-        pending_days: number;
-        approved_days: number;
-        total_days: number;
-    }>;
-    statusOverview: Array<{
-        status: string;
-        count: number;
-        color: string;
-    }>;
-    leaveTypeAnalysis: Array<{
-        type: string;
-        total_days: number;
-        count: number;
-        average_duration: number;
-        longest_leave: number;
-        shortest_leave: number;
-        color: string;
-        department_comparison?: {
-            department_avg_days: number;
-            department_avg_duration: number;
-            department_total_users: number;
-            user_rank: {
-                position: number;
-                total: number;
-            };
-        };
-    }>;
-}>();
+// ====================
+// Types
+// ====================
+interface DashboardData {
+  totalAvailableDays: number;
+  pendingRequests: number;
+  upcomingLeaves: number;
+  teamMembers: Array<{
+    id: number;
+    name: string;
+    designation: string;
+    avatar: string | null;
+    isOnLeave: boolean;
+    leaveDetails?: {
+      type: string;
+      start_date: string;
+      end_date: string;
+      days: number;
+    };
+  }>;
+  recentRequests: Array<{
+    id: number;
+    type: string;
+    days: number;
+    start_date: string;
+    status: string;
+  }>;
+  calendarDays: Array<{
+    date: string;
+    day: number;
+    isCurrentMonth: boolean;
+    isToday: boolean;
+    hasLeave: boolean;
+    isHoliday: boolean;
+  }>;
+  leaveDistribution: Array<{
+    type: string;
+    used: number;
+    total: number;
+    remaining: number;
+    color: string;
+  }>;
+  monthlyTrends: Array<{
+    month: string;
+    leaves: number;
+    pending_days: number;
+    approved_days: number;
+    total_days: number;
+  }>;
+  statusOverview: Array<{
+    status: string;
+    count: number;
+    color: string;
+  }>;
+  leaveTypeAnalysis: Array<{
+    type: string;
+    total_days: number;
+    count: number;
+    average_duration: number;
+    longest_leave: number;
+    shortest_leave: number;
+    color: string;
+    department_comparison?: {
+    department_avg_days: number;
+    department_avg_duration: number;
+    department_total_users: number;
+    user_rank: {
+      position: number;
+      total: number;
+    };
+  };
+  }>;
+}
 
-const { formatDate } = useDateFormat();
+// ====================
+// State
+// ====================
+const totalAvailableDays = ref<number>(0);
+const pendingRequests = ref<number>(0);
+const upcomingLeaves = ref<number>(0);
+const teamMembers = ref<DashboardData['teamMembers']>([]);
+const recentRequests = ref<DashboardData['recentRequests']>([]);
+const leaveDistribution = ref<DashboardData['leaveDistribution']>([]);
+const monthlyTrends = ref<DashboardData['monthlyTrends']>([]);
+const statusOverview = ref<DashboardData['statusOverview']>([]);
+const leaveTypeAnalysis = ref<DashboardData['leaveTypeAnalysis']>([]);
+const apiCalendarDays = ref<DashboardData['calendarDays']>([]);
+const isLoading = ref<boolean>(true);
 
-const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+// ====================
+// Fetch dashboard data
+// ====================
+onMounted(async () => {
+  try {
+    const response = await fetch('/api/dashboard');
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-const getStatusColor = (status: string) => {
-    switch (status) {
-        case 'pending':
-            return 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200';
-        case 'approved':
-            return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200';
-        case 'rejected':
-            return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200';
-        default:
-            return 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-200';
-    }
-};
+    const data: DashboardData = await response.json();
+    console.log('Dashboard data fetched:', data);
+    totalAvailableDays.value = data.totalAvailableDays;
+    pendingRequests.value = data.pendingRequests;
+    upcomingLeaves.value = data.upcomingLeaves;
+    teamMembers.value = data.teamMembers;
+    recentRequests.value = data.recentRequests;
+    leaveDistribution.value = data.leaveDistribution;
+    monthlyTrends.value = data.monthlyTrends;
+    statusOverview.value = data.statusOverview;
+    leaveTypeAnalysis.value = data.leaveTypeAnalysis;
+    apiCalendarDays.value = data.calendarDays;
+  } catch (error) {
+    console.error('Failed to fetch dashboard data:', error);
+  } finally {
+    isLoading.value = false;
+  }
+});
 
+// ====================
+// Calendar generation
+// ====================
 const currentMonth = ref(new Date());
 
 const calendarDays = computed(() => {
-    const startOfMonth = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth(), 1);
-    const endOfMonth = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth() + 1, 0);
-    
-    const days = [];
-    const currentDate = new Date(startOfMonth);
-    
-    // Move to the previous Sunday
-    const dayOfWeek = currentDate.getDay();
-    currentDate.setDate(currentDate.getDate() - dayOfWeek);
-    
-    // Generate 6 weeks of days (42 days)
-    for (let i = 0; i < 42; i++) {
-        const isCurrentMonth = currentDate.getMonth() === currentMonth.value.getMonth();
-        const isToday = currentDate.toDateString() === new Date().toDateString();
-        const dayOfWeek = currentDate.getDay();
-        const isSunday = dayOfWeek === 0;
-        const isSaturday = dayOfWeek === 6;
-        
-        // Check for leaves
-        const hasLeave = props.recentRequests.some(request => {
-            const startDate = new Date(request.start_date);
-            startDate.setHours(0, 0, 0, 0);
-            const endDate = new Date(request.start_date);
-            endDate.setHours(0, 0, 0, 0);
-            endDate.setDate(endDate.getDate() + request.days - 1);
-            
-            const compareDate = new Date(currentDate);
-            compareDate.setHours(0, 0, 0, 0);
-            
-            return compareDate >= startDate && compareDate <= endDate && request.status === 'approved';
-        });
-        
-        days.push({
-            date: currentDate.toISOString().split('T')[0],
-            day: currentDate.getDate(),
-            isCurrentMonth,
-            isToday,
-            hasLeave,
-            isHoliday: false,
-            isSunday,
-            isSaturday
-        });
-        
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-    
-    return days;
+  const startOfMonth = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth(), 1);
+  const days = [];
+  const currentDate = new Date(startOfMonth);
+
+  // Start from the previous Sunday
+  currentDate.setDate(currentDate.getDate() - currentDate.getDay());
+
+  for (let i = 0; i < 42; i++) {
+    const isCurrentMonth = currentDate.getMonth() === currentMonth.value.getMonth();
+    const isToday = currentDate.toDateString() === new Date().toDateString();
+    const dateStr = currentDate.toISOString().split('T')[0];
+
+    // Compare to API data
+    const isHoliday = apiCalendarDays.value.some(day => day.date === dateStr && day.isHoliday);
+    const hasLeave = recentRequests.value.some(request => {
+      const start = new Date(request.start_date);
+      const end = new Date(request.start_date);
+      end.setDate(end.getDate() + request.days - 1);
+
+      return (
+        new Date(dateStr) >= start &&
+        new Date(dateStr) <= end &&
+        request.status === 'approved'
+      );
+    });
+
+    days.push({
+      date: dateStr,
+      day: currentDate.getDate(),
+      isCurrentMonth,
+      isToday,
+      isHoliday,
+      hasLeave,
+      isSunday: currentDate.getDay() === 0,
+      isSaturday: currentDate.getDay() === 6,
+    });
+
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return days;
 });
 
 const navigateMonth = (direction: 'prev' | 'next') => {
-    const newDate = new Date(currentMonth.value);
-    if (direction === 'prev') {
-        newDate.setMonth(newDate.getMonth() - 1);
-    } else {
-        newDate.setMonth(newDate.getMonth() + 1);
-    }
-    currentMonth.value = newDate;
+  const newDate = new Date(currentMonth.value);
+  newDate.setMonth(direction === 'prev' ? newDate.getMonth() - 1 : newDate.getMonth() + 1);
+  currentMonth.value = newDate;
 };
 
+// ====================
+// Utilities
+// ====================
+const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const { formatDate } = useDateFormat();
+const { parseLocalDate } = useDateFormat();
+
 const isWeekend = (date: string) => {
-    const day = new Date(date).getDay();
-    // 0 is Sunday, 6 is Saturday
-    return day === 0 || day === 6;
+  const day = new Date(date).getDay();
+  return day === 0 || day === 6;
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200';
+    case 'approved':
+      return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200';
+    case 'rejected':
+      return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200';
+    default:
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-200';
+  }
 };
 
 const getLeaveTypeColor = (type: string) => {
-    const typeLower = type.toLowerCase();
-    if (typeLower.includes('annual')) return 'from-sky-100 to-sky-200';
-    if (typeLower.includes('sick')) return 'from-rose-100 to-rose-200';
-    if (typeLower.includes('maternity')) return 'from-violet-100 to-violet-200';
-    if (typeLower.includes('paternity')) return 'from-fuchsia-100 to-fuchsia-200';
-    if (typeLower.includes('compassionate')) return 'from-teal-100 to-teal-200';
-    if (typeLower.includes('study')) return 'from-amber-100 to-amber-200';
-    if (typeLower.includes('unpaid')) return 'from-cyan-100 to-cyan-200';
-    return 'from-indigo-100 to-indigo-200';
+  const typeLower = type.toLowerCase();
+  if (typeLower.includes('annual')) return 'from-sky-100 to-sky-200';
+  if (typeLower.includes('sick')) return 'from-rose-100 to-rose-200';
+  if (typeLower.includes('maternity')) return 'from-violet-100 to-violet-200';
+  if (typeLower.includes('paternity')) return 'from-fuchsia-100 to-fuchsia-200';
+  if (typeLower.includes('compassionate')) return 'from-teal-100 to-teal-200';
+  if (typeLower.includes('study')) return 'from-amber-100 to-amber-200';
+  if (typeLower.includes('unpaid')) return 'from-cyan-100 to-cyan-200';
+  return 'from-indigo-100 to-indigo-200';
 };
 
 const getLeaveTypeIcon = (type: string) => {
-    const typeLower = type.toLowerCase();
-    if (typeLower.includes('annual')) return 'bg-sky-100 text-sky-600';
-    if (typeLower.includes('sick')) return 'bg-rose-100 text-rose-600';
-    if (typeLower.includes('maternity')) return 'bg-violet-100 text-violet-600';
-    if (typeLower.includes('paternity')) return 'bg-fuchsia-100 text-fuchsia-600';
-    if (typeLower.includes('compassionate')) return 'bg-teal-100 text-teal-600';
-    if (typeLower.includes('study')) return 'bg-amber-100 text-amber-600';
-    if (typeLower.includes('unpaid')) return 'bg-cyan-100 text-cyan-600';
-    return 'bg-indigo-100 text-indigo-600';
+  const typeLower = type.toLowerCase();
+  if (typeLower.includes('annual')) return 'bg-sky-100 text-sky-600';
+  if (typeLower.includes('sick')) return 'bg-rose-100 text-rose-600';
+  if (typeLower.includes('maternity')) return 'bg-violet-100 text-violet-600';
+  if (typeLower.includes('paternity')) return 'bg-fuchsia-100 text-fuchsia-600';
+  if (typeLower.includes('compassionate')) return 'bg-teal-100 text-teal-600';
+  if (typeLower.includes('study')) return 'bg-amber-100 text-amber-600';
+  if (typeLower.includes('unpaid')) return 'bg-cyan-100 text-cyan-600';
+  return 'bg-indigo-100 text-indigo-600';
 };
 
 const getDayTitle = (day: any) => {
-    const date = new Date(day.date);
-    const formattedDate = date.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+  const date = new Date(day.date);
+  const formattedDate = date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  let title = formattedDate;
+
+  if (day.hasLeave) {
+    const leave = recentRequests.value.find(request => {
+      const startDate = new Date(request.start_date);
+      const endDate = new Date(request.start_date);
+      endDate.setDate(endDate.getDate() + request.days - 1);
+
+      const compareDate = new Date(day.date);
+      return compareDate >= startDate && compareDate <= endDate && request.status === 'approved';
     });
-    
-    let title = formattedDate;
-    
-    if (day.hasLeave) {
-        const leave = props.recentRequests.find(request => {
-            const startDate = new Date(request.start_date);
-            startDate.setHours(0, 0, 0, 0);
-            const endDate = new Date(request.start_date);
-            endDate.setHours(0, 0, 0, 0);
-            endDate.setDate(endDate.getDate() + request.days - 1);
-            
-            const compareDate = new Date(day.date);
-            compareDate.setHours(0, 0, 0, 0);
-            
-            return compareDate >= startDate && compareDate <= endDate && request.status === 'approved';
-        });
-        
-        if (leave) {
-            title += `\nLeave Type: ${leave.type}\nDuration: ${leave.days} days`;
-        }
+
+    if (leave) {
+      title += `\nLeave Type: ${leave.type}\nDuration: ${leave.days} days`;
     }
-    
-    if (day.isHoliday) {
-        title += '\nHoliday';
-    }
-    
-    if (day.isSunday || day.isSaturday) {
-        title += '\nWeekend';
-    }
-    
-    return title;
+  }
+
+  if (day.isHoliday) title += '\nHoliday';
+  if (day.isSunday || day.isSaturday) title += '\nWeekend';
+
+  return title;
 };
 </script>
+
 
 <template>
     <Head title="Dashboard" />
 
     <AppLayout>
-        <div class="flex h-full flex-1 flex-col gap-4 p-4">
+          <div v-if="isLoading" class="flex justify-center items-center h-full">
+             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+            <div class="text-gray-500">
+                Loading dashboard data...
+            </div>
+             
+        </div>
+        <div v-else class="flex h-full flex-1 flex-col gap-4 p-4">
             <!-- Quick Stats -->
             <div class="grid auto-rows-min gap-4 md:grid-cols-3">
                 <!-- Leave Balance Card -->

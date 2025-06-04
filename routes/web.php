@@ -12,13 +12,19 @@ use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\LeaveBalanceController;
 use App\Http\Controllers\Admin\LeaveApplicationController;
 use App\Http\Controllers\Admin\DepartmentRelationshipController;
+use App\Http\Controllers\Admin\StaffReportController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', function () {
+        return Inertia::render('Dashboard');
+    })->middleware(['role_redirect'])->name('dashboard');
+
+    // Dashboard API
+     Route::get('/api/dashboard', [App\Http\Controllers\DashboardController::class, 'index']);
 
     // Profile Routes
     Route::get('/profile', function () {
@@ -57,6 +63,13 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/departments/{department}', [DepartmentController::class, 'update'])->name('departments.update');
         Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
         Route::put('/departments/{department}/toggle-status', [DepartmentController::class, 'toggleStatus'])->name('departments.toggle-status');
+
+        // Dashboard
+        Route::get('/dashboard', function () {
+            return Inertia::render('Admin/Dashboard');
+        })->middleware(['role_redirect'])->name('dashboard');
+        Route::get('/api/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index']);
+
     });
 });
 
@@ -106,16 +119,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware(['role:admin|hr'])->group(function () {
             Route::get('/leave/balances', [LeaveBalanceController::class, 'index'])->name('leave.balances.index');
             Route::get('/leave/balances/export', [LeaveBalanceController::class, 'export'])->name('leave.balances.export');
+
+              // Staff Report Routes
+        Route::get('/staff-report', [StaffReportController::class, 'index'])->name('staff-report.index');
+        Route::get('/staff-report/export', [StaffReportController::class, 'export'])->name('staff-report.export');
         });
 
-    // Admin routes
-    Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
-        // Dashboard
-        Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
-        Route::get('/api/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index']);
-
-        // ... existing admin routes ...
-    });
+        
 });
 
 require __DIR__.'/settings.php';

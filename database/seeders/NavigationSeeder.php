@@ -13,7 +13,7 @@ class NavigationSeeder extends Seeder
 
         // Dashboard
         $dashboard = Navigation::create([
-            'path' => 'dashboard',
+            'path' =>  'dashboard',
             'title' => 'Dashboard',
             'roles' => ['admin', 'supervisor', 'hod', 'hr', 'employee'],
             'icon' => 'home',
@@ -193,7 +193,7 @@ class NavigationSeeder extends Seeder
         ]);
 
         Navigation::create([
-            'path' => 'staff',
+            'path' => 'staff-report',
             'title' => 'Staff Reports',
             'parent_id' => $reports->id,
             'roles' => ['admin', 'supervisor', 'hod', 'hr'],
@@ -232,5 +232,6 @@ class NavigationSeeder extends Seeder
             'order' => 7,
             'is_dropdown' => false,
         ]);
+
     }
 } 

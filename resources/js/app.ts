@@ -11,6 +11,8 @@ import Toast from 'vue-toastification';
 import { ToastPlugin } from './plugins/toast';
 import 'vue-toastification/dist/index.css';
 import { vClickOutside } from './directives/click-outside';
+import VCalendar from 'v-calendar';
+import 'v-calendar/style.css';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -41,6 +43,9 @@ createInertiaApp({
                 newestOnTop: true,
             })
             .use(ToastPlugin)
+            .use(VCalendar, {
+                componentPrefix: 'vc'
+            })
             .directive('click-outside', vClickOutside)
             .mount(el);
     },

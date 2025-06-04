@@ -25,16 +25,24 @@
                     </div>
 
                     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                        <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-green-100 text-green-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-lg font-semibold text-gray-700">On Leave Today</h3>
+                                    <p class="text-2xl font-bold text-gray-900">{{ stats.onLeaveToday }}</p>
+                                </div>
                             </div>
-                            <div class="ml-4">
-                                <h3 class="text-lg font-semibold text-gray-700">On Leave Today</h3>
-                                <p class="text-2xl font-bold text-gray-900">{{ stats.onLeaveToday }}</p>
-                            </div>
+                            <button 
+                                @click="showLeaveDetails = true"
+                                class="text-sm text-blue-600 hover:text-blue-800"
+                            >
+                                View Details
+                            </button>
                         </div>
                     </div>
 
@@ -151,6 +159,64 @@
                 </div>
             </div>
         </div>
+
+        <!-- Leave Details Modal -->
+        <Modal :show="showLeaveDetails" @close="showLeaveDetails = false">
+            <div class="p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">
+                    Staff on Leave Today
+                </h2>
+                
+                <div class="space-y-4">
+                    <div v-for="staff in staffOnLeave" :key="staff.id" class="bg-gray-50 p-4 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <UserAvatar :src="staff.user.avatar" :user="staff.user" size="md" />
+                                <div>
+                                    <h3 class="text-sm font-medium text-gray-900">
+                                        {{ staff.user.firstname }} {{ staff.user.lastname }}
+                                    </h3>
+                                    <p class="text-sm text-gray-500">{{ staff.user.department?.name }}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm font-medium text-gray-900">{{ staff.leave_type.name }}</p>
+                                <p class="text-sm text-gray-500">
+                                    {{ formatDate(staff.start_date) }} - {{ formatDate(staff.end_date) }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-3 flex items-center justify-between text-sm">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-gray-500">
+                                    <PhoneIcon class="w-4 h-4 inline mr-1" />
+                                    {{ staff.user.phone || 'No contact' }}
+                                </span>
+                                <span class="text-gray-500">
+                                    <EnvelopeIcon class="w-4 h-4 inline mr-1" />
+                                    {{ staff.user.email }}
+                                </span>
+                            </div>
+                            <div>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                    :class="{
+                                        'bg-green-100 text-green-800': staff.status === 'approved',
+                                        'bg-yellow-100 text-yellow-800': staff.status === 'pending',
+                                        'bg-red-100 text-red-800': staff.status === 'rejected'
+                                    }"
+                                >
+                                    {{ staff.status }}
+                                </span>
+                            </div>
+                        </div>
+                        <div v-if="staff.replacement_staff_name" class="mt-2 text-sm text-gray-500">
+                            <span class="font-medium">Replacement:</span> {{ staff.replacement_staff_name }}
+                            <span v-if="staff.replacement_staff_phone">({{ staff.replacement_staff_phone }})</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Modal>
     </AppLayout>
 </template>
 
@@ -158,6 +224,8 @@
 import { ref, onMounted } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import UserAvatar from '@/Components/UserAvatar.vue';
+import Modal from '@/Components/Modal.vue';
+import { PhoneIcon, EnvelopeIcon } from '@heroicons/vue/24/outline';
 import { Chart, registerables } from 'chart.js';
 import { format } from 'date-fns';
 
@@ -186,6 +254,29 @@ interface LeaveApplication {
     status: string;
 }
 
+interface StaffOnLeave {
+    id: number;
+    user: {
+        firstname: string;
+        lastname: string;
+        staff_id: string;
+        avatar: string;
+        email: string;
+        phone: string;
+        department?: {
+            name: string;
+        };
+    };
+    leave_type: {
+        name: string;
+    };
+    start_date: string;
+    end_date: string;
+    status: string;
+    replacement_staff_name?: string;
+    replacement_staff_phone?: string;
+}
+
 const stats = ref<Stats>({
     pendingApprovals: 0,
     onLeaveToday: 0,
@@ -197,6 +288,8 @@ const recentApplications = ref<LeaveApplication[]>([]);
 const upcomingLeave = ref<LeaveApplication[]>([]);
 const leaveDistributionChart = ref<HTMLCanvasElement | null>(null);
 const departmentLeaveChart = ref<HTMLCanvasElement | null>(null);
+const showLeaveDetails = ref(false);
+const staffOnLeave = ref<StaffOnLeave[]>([]);
 
 const formatDate = (date: string) => {
     return format(new Date(date), 'MMM dd, yyyy');
@@ -214,12 +307,13 @@ const getStatusClass = (status: string) => {
 
 onMounted(async () => {
     // Fetch dashboard data
-    const response = await fetch('/api/admin/dashboard');
+    const response = await fetch('/admin/api/dashboard');
     const data = await response.json();
     
     stats.value = data.stats;
     recentApplications.value = data.recentApplications;
     upcomingLeave.value = data.upcomingLeave;
+    staffOnLeave.value = data.staffOnLeave;
 
     // Initialize charts
     if (leaveDistributionChart.value) {

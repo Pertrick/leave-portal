@@ -196,8 +196,6 @@ class StaffController extends Controller
 
     public function pendingLeaveAccounts()
     {
-        // $this->authorize('manage-users');
-
         $query = AccountRequest::with(['processor'])
             ->where('status', config('account.request_status.pending'))
             ->orderBy('created_at', 'desc');

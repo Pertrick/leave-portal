@@ -14,7 +14,7 @@ class DepartmentHeadController extends Controller
 
     public function __construct(SupervisorService $supervisorService)
     {
-        $this->middleware('permission:manage-hods');
+        // $this->middleware('permission:manage-hods');
         $this->supervisorService = $supervisorService;
     }
 

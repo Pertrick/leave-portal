@@ -36,9 +36,9 @@
 
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
           <form @submit.prevent="submit" class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
               <!-- Leave Type -->
-              <div>
+              <div class="md:col-span-1">
                 <InputLabel for="leave_type_id" value="Leave Type" />
                 <SelectInput id="leave_type_id" v-model="form.leave_type_id" class="mt-1 block w-full" required>
                   <option value="">Select Leave Type</option>
@@ -82,31 +82,65 @@
               </div>
 
               <!-- Start Date -->
-              <div>
-                <InputLabel for="start_date" value="Start Date" />
-                <TextInput id="start_date" type="date" v-model="form.start_date" class="mt-1 block w-full" required
-                  :min="minDate" @change="updateDateRange" />
-                <InputError :message="form.errors.start_date" class="mt-2" />
-                <div v-if="isSubmitDisabled" class="mt-1 text-sm text-red-600">
-                  <p v-if="!form.start_date || !form.end_date || !form.leave_type_id">
-                    Please fill in all required fields (Leave Type, Start Date, and End Date)
-                  </p>
-                  <p v-else-if="pendingLeaves > 0">
-                    You have {{ pendingLeaves }} pending leave {{ pendingLeaves === 1 ? 'request' : 'requests' }}. Please wait for approval.
-                  </p>
-                  <p v-else-if="selectedLeaveBalance && workingDays > selectedLeaveBalance.days_remaining">
-                    Insufficient leave balance. You have {{ selectedLeaveBalance.days_remaining }} days remaining but requested {{ workingDays }} days.
-                  </p>
+              <div class="md:col-span-2">
+                <div class="flex items-center justify-between mb-2">
+                    <InputLabel value="Leave Period" />
+                    <button 
+                      type="button"
+                      @click="isCalendarExpanded = !isCalendarExpanded"
+                      class="text-sm text-gray-500 hover:text-gray-700 focus:outline-none"
+                    >
+                      {{ isCalendarExpanded ? 'Collapse' : 'Expand' }} Calendar
+                    </button>
                 </div>
+
+                    <Transition
+      enter-active-class="transition ease-out duration-200"
+      enter-from-class="opacity-0 scale-95"
+      enter-to-class="opacity-100 scale-100"
+      leave-active-class="transition ease-in duration-100"
+      leave-from-class="opacity-100 scale-100"
+      leave-to-class="opacity-0 scale-95"
+    >
+
+     <div 
+        :class="{ 
+          'fixed inset-0 z-50 bg-gray-900/75 flex items-center justify-center': isCalendarExpanded,
+          'relative': !isCalendarExpanded
+        }"
+      >
+        <div 
+          :class="{
+            'bg-white rounded-lg shadow-xl p-4 max-w-4xl w-full mx-4': isCalendarExpanded,
+            'w-full': !isCalendarExpanded
+          }"
+        > <DatePicker
+            v-model.range="dateRange"
+            mode="range"
+            :min-date="allowBackdate ? null : new Date()"
+            :max-date="maxDate"
+            :attributes="calendarAttributes"
+            :is-expanded="isCalendarExpanded"
+            :trim-weeks="!isCalendarExpanded"
+            class="mt-1 border border-gray-300 rounded-md shadow-sm w-full"
+          />
+          
+          <button
+            v-if="isCalendarExpanded"
+            type="button"
+            @click="isCalendarExpanded = false"
+            class="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+  </Transition>
+
+                <InputError :message="form.errors.start_date || form.errors.end_date" class="mt-2" />
               </div>
 
-              <!-- End Date -->
-              <div>
-                <InputLabel for="end_date" value="End Date" />
-                <TextInput id="end_date" type="date" v-model="form.end_date" class="mt-1 block w-full" required
-                  :min="form.start_date || minDate" @change="updateDateRange" />
-                <InputError :message="form.errors.end_date" class="mt-2" />
-              </div>
+              
 
               <!-- Duration Preview -->
               <div class="md:col-span-2">
@@ -225,7 +259,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, getCurrentInstance } from 'vue'
+import { ref, computed, watch, getCurrentInstance,onMounted } from 'vue'
 import { useForm, Link } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import InputLabel from '@/Components/InputLabel.vue'
@@ -239,9 +273,14 @@ import SecondaryButton from '@/Components/SecondaryButton.vue'
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline/index.js'
 import { debounce } from 'lodash'
 import { useFlash } from '@/composables/useFlash'
+import { DatePicker } from 'v-calendar';
 
 const { flash } = useFlash()
 const { proxy } = getCurrentInstance()
+
+onMounted(() => {
+  fetchAllHolidays();
+});
 
 const props = defineProps({
   leaveTypes: {
@@ -261,8 +300,66 @@ const props = defineProps({
   }
 })
 
+const allHolidays = ref([])
 const holidays = ref([])
 const durationLoading = ref(false)
+const isCalendarExpanded = ref(false);
+
+// Add these after your existing refs
+const dateRange = ref({
+  start: null,
+  end: null
+});
+
+// Add this computed property
+// Update your calendarAttributes computed property
+const calendarAttributes = computed(() => {
+  const holidayAttrs = allHolidays.value.map(holiday => ({
+    key: `holiday-${holiday.date}`,
+    dates: new Date(holiday.date),
+    dot: {
+      color: 'red',
+      class: 'holiday-dot'
+    },
+    highlight: {
+      color: 'red',
+      fillMode: 'light',
+      class: 'holiday-highlight'
+    },
+    popover: {
+      label: holiday.name,
+      visibility: 'hover',
+      hideIndicator: true
+    },
+    customData: {
+      title: holiday.name
+    }
+  }));
+
+  const rangeAttrs = (dateRange.value.start && dateRange.value.end)
+    ? [{
+        key: 'range',
+        dates: { start: dateRange.value.start, end: dateRange.value.end },
+        highlight: {
+          color: 'blue',
+          fillMode: 'light'
+        }
+      }]
+    : [];
+
+  return [
+    ...holidayAttrs,
+    {
+      key: 'weekends',
+      weekdays: [1, 7],
+      highlight: {
+        color: 'gray',
+        fillMode: 'light'
+      }
+    },
+    ...rangeAttrs
+  ];
+});
 
 const form = useForm({
   leave_type_id: '',
@@ -278,7 +375,47 @@ const form = useForm({
   replacement_staff_phone: '',
 })
 
-const minDate = new Date().toISOString().split('T')[0]
+
+
+const allowBackdate = computed(() => {
+  // Check if selected leave type is medical leave
+  const isMedicalLeave = selectedLeaveType.value?.name.toLowerCase().includes('medical');
+  return isMedicalLeave;
+});
+
+const maxDate = computed(() => {
+  if (allowBackdate.value) {
+    // For medical leave, allow backdating up to 7 days
+    const date = new Date();
+    date.setDate(date.getDate() + 30); // Allow future dates up to 30 days
+    return date;
+  }
+  return null; // No maximum date for other leave types
+});
+
+// Add this new method after your existing methods
+const fetchAllHolidays = async () => {
+  try {
+    const currentYear = new Date().getFullYear();
+    const startDate = `${currentYear}-01-01`;
+    const endDate = `${currentYear}-12-31`;
+    
+    const response = await axios.get('/api/range/holidays', {
+      params: {
+        start_date: startDate,
+        end_date: endDate
+      },
+      headers: {
+        'Accept': 'application/json'
+      },
+      withCredentials: true
+    });
+    allHolidays.value = response.data;
+  } catch (error) {
+    console.error('Error fetching holidays:', error);
+  }
+};
+
 
 const duration = computed(() => {
   if (!form.start_date || !form.end_date) return 0
@@ -300,13 +437,28 @@ const selectedLeaveType = computed(() => {
   return props.leaveTypes.find(type => type.id === parseInt(form.leave_type_id))
 })
 
+const showBackdateWarning = computed(() => {
+  return allowBackdate.value && dateRange.value.start && 
+    new Date(dateRange.value.start) < new Date();
+});
+
 const isSubmitDisabled = computed(() => {
-  return form.processing || 
+   const selectedDate = new Date(form.start_date);
+  const today = new Date();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(today.getDate() - 30);
+
+  const isBackdatedMedicalValid = allowBackdate.value ? 
+    selectedDate >= sevenDaysAgo : 
+    true;
+
+    return form.processing || 
          !form.start_date || 
          !form.end_date || 
          !form.leave_type_id || 
          props.pendingLeaves > 0 ||
-         (selectedLeaveBalance.value && workingDays.value > selectedLeaveBalance.value.days_remaining)
+         (selectedLeaveBalance.value && workingDays.value > selectedLeaveBalance.value.days_remaining) ||
+         !isBackdatedMedicalValid;
 })
 
 const submit = () => {
@@ -327,6 +479,24 @@ const submit = () => {
   if (!form.replacement_staff_phone) {
     form.errors.replacement_staff_phone = 'Please provide a valid replacement phone number.'
     return
+  }
+
+
+   if (allowBackdate.value) {
+    const selectedDate = new Date(form.start_date);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    if (selectedDate < sevenDaysAgo) {
+      proxy.$toast.error('Medical leave can only be backdated up to 7 days');
+      return;
+    }
+
+    // Require attachment for backdated medical leave
+    if (!form.attachment) {
+      form.errors.attachment = 'Supporting documents are required for backdated medical leave';
+      return;
+    }
   }
 
   // Validate leave balance
@@ -370,24 +540,32 @@ const saveDraft = () => {
 }
 
 const updateDateRange = async () => {
-  if (form.start_date && form.end_date) {
+  if (dateRange.value.start && dateRange.value.end) {
     try {
       const response = await axios.get('/api/holidays', {
         params: {
-          start_date: form.start_date,
-          end_date: form.end_date
+          start_date: formatDateToYYYYMMDD(dateRange.value.start),
+          end_date: formatDateToYYYYMMDD(dateRange.value.end)
         },
         headers: {
           'Accept': 'application/json'
         },
         withCredentials: true
-      })
-      holidays.value = response.data
+      });
+      holidays.value = response.data;
+      
+      if (form.leave_type_id) {
+        calculateDuration(
+          formatDateToYYYYMMDD(dateRange.value.start),
+          formatDateToYYYYMMDD(dateRange.value.end),
+          form.leave_type_id
+        );
+      }
     } catch (error) {
-      console.error('Error fetching holidays:', error)
+      console.error('Error fetching holidays:', error);
     }
   }
-}
+};
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('en-US', {
@@ -426,6 +604,21 @@ watch([() => form.start_date, () => form.end_date, () => form.leave_type_id],
   }
 )
 
+// Add this watch handler
+watch(dateRange, (newRange) => {
+  if (newRange.start && newRange.end) {
+    form.start_date = formatDateToYYYYMMDD(newRange.start);
+    form.end_date = formatDateToYYYYMMDD(newRange.end);
+    updateDateRange();
+  }
+}, { deep: true });
+
+// Add this helper function
+const formatDateToYYYYMMDD = (date) => {
+  if (!date) return '';
+  return date.toISOString().split('T')[0];
+};
+
 watch(() => form.leave_type_id, (newTypeId) => {
   const selectedType = props.leaveTypes.find(type => type.id === newTypeId)
   if (!selectedType?.requires_medical_proof) {
@@ -451,3 +644,35 @@ watch(() => form.replacement_staff_phone, () => {
   }
 })
 </script>
+
+
+<style>
+.holiday-dot {
+  background-color: red;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.vc-container {
+  --vc-background-color: white;
+  --vc-border-color: #e5e7eb;
+  --vc-accent-color: #3b82f6;
+  --vc-today-color: #3b82f6;
+  border-radius: 0.375rem;
+   font-size: 1.1em;
+}
+
+.vc-day.is-selected {
+  font-weight: bold;
+}
+
+
+.dark .vc-container {
+  --vc-background-color: #1f2937;
+  --vc-border-color: #374151;
+  --vc-accent-color: #3b82f6;
+  --vc-today-color: #3b82f6;
+}
+
+</style>

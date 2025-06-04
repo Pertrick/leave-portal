@@ -21,10 +21,11 @@ use App\Models\Holiday;
 
 Route::middleware(['auth', 'web'])->group(function () {
     Route::get('/holidays', [HolidayController::class, 'getHolidays'])->name('api.holidays');
+  
 });
 
 Route::get('/supervisors/{supervisor}/users', [SupervisorController::class, 'getSupervisedUsers']);
-
+  Route::get('/range/holidays', [HolidayController::class, 'getHolidaysInRange'])->name('api.inrange.holidays');
 Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_middleware', 'inertia')
