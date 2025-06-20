@@ -36,9 +36,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, getCurrentInstance } from 'vue';
 import { usePage } from '@inertiajs/vue3';
-import { ToastService } from '@/services/toast';
 import { CheckCircleIcon, XCircleIcon, ExclamationCircleIcon, InformationCircleIcon } from '@heroicons/vue/24/outline';
 
 interface Alert {
@@ -48,6 +47,7 @@ interface Alert {
 
 const page = usePage();
 const alert = ref<Alert | null>(page.props.alert as Alert | null);
+const instance = getCurrentInstance();
 
 const alertClasses = {
     success: 'bg-green-50 border border-green-200',
@@ -74,18 +74,26 @@ const closeAlert = () => {
     alert.value = null;
 };
 
+const showToast = (type: string, message: string) => {
+    if (instance?.proxy?.$toast) {
+        (instance.proxy.$toast as any)[type](message);
+    }
+};
+
 watch(() => page.props.alert, (newAlert) => {
-    if (newAlert) {
-        alert.value = newAlert as Alert;
-        // Also show toast notification
-        ToastService[newAlert.type as keyof typeof ToastService](newAlert.message);
+    console.log('Alert watch triggered:', newAlert);
+    if (newAlert && typeof newAlert === 'object' && 'type' in newAlert && 'message' in newAlert) {
+        const typedAlert = newAlert as { type: string; message: string };
+        alert.value = typedAlert as Alert;
+        showToast(typedAlert.type, typedAlert.message);
     }
 });
 
 onMounted(() => {
+    console.log('Alert component mounted, alert value:', alert.value);
+    console.log('Page props:', page.props);
     if (alert.value) {
-        // Show initial toast notification
-        ToastService[alert.value.type as keyof typeof ToastService](alert.value.message);
+        showToast(alert.value.type, alert.value.message);
     }
 });
 </script> 

@@ -37,7 +37,7 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
+        [$message, $author] = str(\Illuminate\Foundation\Inspiring::quotes()->random())->explode('-');
 
         return [
             ...parent::share($request),
@@ -47,10 +47,19 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'ziggy' => [
-                ...(new Ziggy)->toArray(),
+                ...(new \Tighten\Ziggy\Ziggy)->toArray(),
                 'location' => $request->url(),
             ],
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'sidebarOpen' => !$request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'alert' => fn() => match (true) {
+                $request->session()->has('success') => ['type' => 'success', 'message' => $request->session()->get('success')],
+                $request->session()->has('error') => ['type' => 'error', 'message' => $request->session()->get('error')],
+                $request->session()->has('warning') => ['type' => 'warning', 'message' => $request->session()->get('warning')],
+                $request->session()->has('info') => ['type' => 'info', 'message' => $request->session()->get('info')],
+                default => null,
+            }
+
         ];
     }
+
 }

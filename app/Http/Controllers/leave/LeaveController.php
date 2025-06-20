@@ -73,6 +73,7 @@ class LeaveController extends Controller
                 return back()->with('error', 'You have pending leave requests. Please wait for approval before submitting new requests.');
             }
 
+
             $validated = $request->validated();
             $leave = $this->leaveService->create($validated, $user);
 
@@ -146,7 +147,6 @@ class LeaveController extends Controller
 
     public function update(StoreLeaveRequest $request, Leave $leave): RedirectResponse
     {
-        
         try {
             $user = Auth::guard('web')->user();
             abort_if($user->id != $leave->user_id, 403, 'You are not authorized to update this leave application.');
@@ -191,7 +191,10 @@ class LeaveController extends Controller
                 ->with('error', 'Only pending leave applications can be cancelled.');
         }
 
-        $leave->delete();
+        $leave->update([
+            'status' => Leave::STATUS_CANCELLED,
+            'is_cancelled' => true
+            ]);
 
         return redirect()->route('leaves.index')
             ->with('success', 'Leave application cancelled successfully.');

@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head } from '@inertiajs/vue3';
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Calendar, Clock, CalendarCheck, Users, AlertCircle, PieChart, BarChart, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { useDateFormat } from '@/composables/useDateFormat';
+import { CalendarView, CalendarViewHeader } from 'vue-simple-calendar';
+import 'vue-simple-calendar/dist/vue-simple-calendar.css';
+import 'vue-simple-calendar/dist/css/default.css';
 
 // ====================
 // Types
@@ -95,37 +98,30 @@ const apiCalendarDays = ref<DashboardData['calendarDays']>([]);
 const isLoading = ref<boolean>(true);
 
 // ====================
-// Fetch dashboard data
+// Calendar State
 // ====================
-onMounted(async () => {
-  try {
-    const response = await fetch('/api/dashboard');
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+const currentMonth = ref(new Date());
+const calendarEvents = ref<any[]>([]);
+const selectedEvent = ref<any>(null);
+const showEventModal = ref(false);
+const calendarView = ref<'month' | 'week' | 'year'>('month');
 
-    const data: DashboardData = await response.json();
-    console.log('Dashboard data fetched:', data);
-    totalAvailableDays.value = data.totalAvailableDays;
-    pendingRequests.value = data.pendingRequests;
-    upcomingLeaves.value = data.upcomingLeaves;
-    teamMembers.value = data.teamMembers;
-    recentRequests.value = data.recentRequests;
-    leaveDistribution.value = data.leaveDistribution;
-    monthlyTrends.value = data.monthlyTrends;
-    statusOverview.value = data.statusOverview;
-    leaveTypeAnalysis.value = data.leaveTypeAnalysis;
-    apiCalendarDays.value = data.calendarDays;
-  } catch (error) {
-    console.error('Failed to fetch dashboard data:', error);
-  } finally {
-    isLoading.value = false;
+// Keyboard shortcuts
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && showEventModal.value) {
+    closeEventModal();
+  } else if (event.key === 'ArrowLeft' && !showEventModal.value) {
+    goToPreviousMonth();
+  } else if (event.key === 'ArrowRight' && !showEventModal.value) {
+    goToNextMonth();
+  } else if (event.key === 'Home' && !showEventModal.value) {
+    goToToday();
   }
-});
+};
 
 // ====================
 // Calendar generation
 // ====================
-const currentMonth = ref(new Date());
-
 const calendarDays = computed(() => {
   const startOfMonth = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth(), 1);
   const days = [];
@@ -170,10 +166,55 @@ const calendarDays = computed(() => {
   return days;
 });
 
-const navigateMonth = (direction: 'prev' | 'next') => {
-  const newDate = new Date(currentMonth.value);
-  newDate.setMonth(direction === 'prev' ? newDate.getMonth() - 1 : newDate.getMonth() + 1);
+const navigateMonth = (newDate: Date) => {
   currentMonth.value = newDate;
+};
+
+const goToToday = () => {
+  currentMonth.value = new Date();
+};
+
+const goToPreviousMonth = () => {
+  const newDate = new Date(currentMonth.value);
+  if (calendarView.value === 'year') {
+    newDate.setFullYear(newDate.getFullYear() - 1);
+  } else {
+    newDate.setMonth(newDate.getMonth() - 1);
+  }
+  currentMonth.value = newDate;
+};
+
+const goToNextMonth = () => {
+  const newDate = new Date(currentMonth.value);
+  if (calendarView.value === 'year') {
+    newDate.setFullYear(newDate.getFullYear() + 1);
+  } else {
+    newDate.setMonth(newDate.getMonth() + 1);
+  }
+  currentMonth.value = newDate;
+};
+
+const handleEventClick = (event: any) => {
+  selectedEvent.value = event;
+  showEventModal.value = true;
+};
+
+const closeEventModal = () => {
+  showEventModal.value = false;
+  selectedEvent.value = null;
+};
+
+const getEventTooltip = (event: any) => {
+  if (event.id.startsWith('leave-')) {
+    const requestId = event.id.replace('leave-', '');
+    const request = recentRequests.value.find(r => r.id.toString() === requestId);
+    if (request) {
+      return `${request.type} Leave\nDuration: ${request.days} days\nStatus: ${request.status}`;
+    }
+  } else if (event.id.startsWith('holiday-')) {
+    return 'Public Holiday';
+  }
+  return event.title;
 };
 
 // ====================
@@ -225,6 +266,18 @@ const getLeaveTypeIcon = (type: string) => {
   return 'bg-indigo-100 text-indigo-600';
 };
 
+const getLeaveEventColor = (type: string) => {
+  const typeLower = type.toLowerCase();
+  if (typeLower.includes('annual')) return '#0ea5e9'; // sky-500
+  if (typeLower.includes('sick')) return '#f43f5e'; // rose-500
+  if (typeLower.includes('maternity')) return '#8b5cf6'; // violet-500
+  if (typeLower.includes('paternity')) return '#d946ef'; // fuchsia-500
+  if (typeLower.includes('compassionate')) return '#14b8a6'; // teal-500
+  if (typeLower.includes('study')) return '#f59e0b'; // amber-500
+  if (typeLower.includes('unpaid')) return '#06b6d4'; // cyan-500
+  return '#6366f1'; // indigo-500
+};
+
 const getDayTitle = (day: any) => {
   const date = new Date(day.date);
   const formattedDate = date.toLocaleDateString('en-US', {
@@ -256,6 +309,80 @@ const getDayTitle = (day: any) => {
 
   return title;
 };
+
+// ====================
+// Fetch dashboard data
+// ====================
+onMounted(async () => {
+  try {
+    const response = await fetch('/api/dashboard');
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+    const data: DashboardData = await response.json();
+    console.log('Dashboard data fetched:', data);
+    totalAvailableDays.value = data.totalAvailableDays;
+    pendingRequests.value = data.pendingRequests;
+    upcomingLeaves.value = data.upcomingLeaves;
+    teamMembers.value = data.teamMembers;
+    recentRequests.value = data.recentRequests;
+    leaveDistribution.value = data.leaveDistribution;
+    monthlyTrends.value = data.monthlyTrends;
+    statusOverview.value = data.statusOverview;
+    leaveTypeAnalysis.value = data.leaveTypeAnalysis;
+    apiCalendarDays.value = data.calendarDays;
+
+    // Convert data to calendar events
+    const events: any[] = [];
+    
+    // Add leave events
+    recentRequests.value.forEach(request => {
+      if (request.status === 'approved') {
+        const startDate = new Date(request.start_date);
+        const endDate = new Date(request.start_date);
+        endDate.setDate(endDate.getDate() + request.days - 1);
+        
+        events.push({
+          id: `leave-${request.id}`,
+          title: `${request.type} Leave`,
+          startDate: startDate.toISOString().split('T')[0],
+          endDate: endDate.toISOString().split('T')[0],
+          classes: ['leave-event', `leave-${request.type.toLowerCase().replace(/\s+/g, '-')}`],
+          color: getLeaveEventColor(request.type)
+        });
+      }
+    });
+
+    // Add holiday events
+    apiCalendarDays.value.forEach(day => {
+      if (day.isHoliday) {
+        events.push({
+          id: `holiday-${day.date}`,
+          title: 'Holiday',
+          startDate: day.date,
+          endDate: day.date,
+          classes: ['holiday-event'],
+          color: '#10b981' // emerald-500
+        });
+      }
+    });
+
+    calendarEvents.value = events;
+  } catch (error) {
+    console.error('Failed to fetch dashboard data:', error);
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+// Add keyboard event listener
+onMounted(() => {
+  document.addEventListener('keydown', handleKeydown);
+});
+
+// Clean up event listener
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown);
+});
 </script>
 
 
@@ -508,64 +635,85 @@ const getDayTitle = (day: any) => {
                 <div class="md:col-span-2">
                     <div class="h-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                         <div class="p-6">
-                            <!-- Calendar Header with Navigation -->
+                            <!-- Calendar Header with Controls -->
                             <div class="mb-4 flex items-center justify-between">
                                 <h3 class="text-lg font-medium text-gray-900 dark:text-white">Leave Calendar</h3>
-                                <div class="flex items-center gap-2">
-                                    <button @click="navigateMonth('prev')"
+                                <div class="flex items-center space-x-2">
+                                    <!-- View Dropdown -->
+                                    <select v-model="calendarView"
+                                        class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+                                        <option value="month">Month View</option>
+                                        <option value="week">Week View</option>
+                                        <option value="year">Year View</option>
+                                    </select>
+                                    
+                                    <!-- Navigation Controls -->
+                                    <button @click="goToPreviousMonth"
                                         class="rounded-lg border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700">
                                         <ChevronLeft class="h-5 w-5" />
                                     </button>
-                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    
+                                    <!-- Month Name Display -->
+                                    <span class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                                         {{ currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' }) }}
                                     </span>
-                                    <button @click="navigateMonth('next')"
+                                    
+                                    <button @click="goToToday"
+                                        class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+                                        Today
+                                    </button>
+                                    
+                                    <button @click="goToNextMonth"
                                         class="rounded-lg border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700">
                                         <ChevronRight class="h-5 w-5" />
                                     </button>
                                 </div>
                             </div>
-
-                            <!-- Calendar Grid -->
-                            <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                                <!-- Calendar Header -->
-                                <div class="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700">
-                                    <div v-for="day in weekDays" :key="day"
-                                        class="bg-gray-50 py-2 text-center text-sm font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                                        {{ day }}
-                                    </div>
+                            
+                            <!-- Calendar Display -->
+                            <div class="h-[600px]">
+                                <CalendarView
+                                    :show-date="currentMonth"
+                                    :items="calendarEvents"
+                                    :display-period-uom="calendarView"
+                                    :display-period-count="calendarView === 'year' ? 12 : 1"
+                                    class="theme-default"
+                                    @click-item="handleEventClick" />
+                            </div>
+                            
+                            <!-- Calendar Legend -->
+                            <div class="mt-4 flex flex-wrap items-center gap-4 text-sm">
+                                <div class="flex items-center space-x-2">
+                                    <div class="h-3 w-3 rounded" style="background-color: #0ea5e9;"></div>
+                                    <span class="text-gray-600 dark:text-gray-400">Annual Leave</span>
                                 </div>
-                                <!-- Calendar Grid -->
-                                <div class="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700">
-                                    <div v-for="day in calendarDays" :key="day.date"
-                                        class="relative min-h-[100px] bg-white p-2 dark:bg-gray-800"
-                                        :class="{
-                                            'bg-gray-50 dark:bg-gray-900': !day.isCurrentMonth,
-                                            'bg-indigo-50 dark:bg-indigo-900/20': day.hasLeave,
-                                            'bg-emerald-50 dark:bg-emerald-900/20': day.isHoliday,
-                                            'bg-red-50 dark:bg-red-900/20': day.isSunday && day.isCurrentMonth,
-                                            'bg-yellow-50 dark:bg-yellow-900/20': day.isSaturday && day.isCurrentMonth
-                                        }"
-                                        :title="getDayTitle(day)">
-                                        <span class="text-sm" :class="{
-                                            'text-gray-400 dark:text-gray-500': !day.isCurrentMonth,
-                                            'font-semibold': day.isToday,
-                                            'text-red-600 dark:text-red-400': day.isSunday && day.isCurrentMonth,
-                                            'text-yellow-600 dark:text-yellow-400': day.isSaturday && day.isCurrentMonth
-                                        }">{{ day.day }}</span>
-                                        <div v-if="day.hasLeave" class="mt-1">
-                                            <span
-                                                class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200">
-                                                Leave
-                                            </span>
-                                        </div>
-                                        <div v-if="day.isHoliday" class="mt-1">
-                                            <span
-                                                class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200">
-                                                Holiday
-                                            </span>
-                                        </div>
-                                    </div>
+                                <div class="flex items-center space-x-2">
+                                    <div class="h-3 w-3 rounded" style="background-color: #f43f5e;"></div>
+                                    <span class="text-gray-600 dark:text-gray-400">Sick Leave</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <div class="h-3 w-3 rounded" style="background-color: #8b5cf6;"></div>
+                                    <span class="text-gray-600 dark:text-gray-400">Maternity Leave</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <div class="h-3 w-3 rounded" style="background-color: #d946ef;"></div>
+                                    <span class="text-gray-600 dark:text-gray-400">Paternity Leave</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <div class="h-3 w-3 rounded" style="background-color: #14b8a6;"></div>
+                                    <span class="text-gray-600 dark:text-gray-400">Compassionate Leave</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <div class="h-3 w-3 rounded" style="background-color: #f59e0b;"></div>
+                                    <span class="text-gray-600 dark:text-gray-400">Study Leave</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <div class="h-3 w-3 rounded" style="background-color: #06b6d4;"></div>
+                                    <span class="text-gray-600 dark:text-gray-400">Unpaid Leave</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <div class="h-3 w-3 rounded" style="background-color: #10b981;"></div>
+                                    <span class="text-gray-600 dark:text-gray-400">Holiday</span>
                                 </div>
                             </div>
                         </div>
@@ -667,6 +815,65 @@ const getDayTitle = (day: any) => {
             </div>
         </div>
     </AppLayout>
+    
+    <!-- Event Details Modal -->
+    <div v-if="showEventModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
+            <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Event Details</h3>
+                <button @click="closeEventModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div v-if="selectedEvent" class="space-y-4">
+                <div class="flex items-center space-x-3">
+                    <div class="h-4 w-4 rounded" :style="{ backgroundColor: selectedEvent.color }"></div>
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white">{{ selectedEvent.title }}</h4>
+                </div>
+                
+                <div class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                    <div class="flex justify-between">
+                        <span>Start Date:</span>
+                        <span class="font-medium text-gray-900 dark:text-white">{{ formatDate(selectedEvent.startDate) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>End Date:</span>
+                        <span class="font-medium text-gray-900 dark:text-white">{{ formatDate(selectedEvent.endDate) }}</span>
+                    </div>
+                    
+                    <div v-if="selectedEvent.id.startsWith('leave-')" class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-between">
+                            <span>Duration:</span>
+                            <span class="font-medium text-gray-900 dark:text-white">
+                                {{ Math.ceil((new Date(selectedEvent.endDate).getTime() - new Date(selectedEvent.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1 }} days
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Status:</span>
+                            <span class="font-medium text-emerald-600 dark:text-emerald-400">Approved</span>
+                        </div>
+                    </div>
+                    
+                    <div v-if="selectedEvent.id.startsWith('holiday-')" class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-between">
+                            <span>Type:</span>
+                            <span class="font-medium text-gray-900 dark:text-white">Public Holiday</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-2 pt-4">
+                    <button @click="closeEventModal" 
+                        class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>
 
 <style scoped>
@@ -703,5 +910,52 @@ const getDayTitle = (day: any) => {
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: rgba(75, 85, 99, 0.7);
+}
+
+/* Calendar Event Styles */
+.leave-event {
+    color: white !important;
+    border-radius: 4px !important;
+    padding: 2px 6px !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+}
+
+.holiday-event {
+    background-color: #10b981 !important;
+    color: white !important;
+    border-radius: 4px !important;
+    padding: 2px 6px !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+}
+
+/* Leave type specific colors - Updated to match legend */
+.leave-annual {
+    background-color: #0ea5e9 !important;
+}
+
+.leave-sick {
+    background-color: #f43f5e !important;
+}
+
+.leave-maternity {
+    background-color: #8b5cf6 !important;
+}
+
+.leave-paternity {
+    background-color: #d946ef !important;
+}
+
+.leave-compassionate {
+    background-color: #14b8a6 !important;
+}
+
+.leave-study {
+    background-color: #f59e0b !important;
+}
+
+.leave-unpaid {
+    background-color: #06b6d4 !important;
 }
 </style>

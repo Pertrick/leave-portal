@@ -18,6 +18,16 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
+// Test route for alerts
+
+Route::get('/test-alert', function () {
+    return redirect()->route('dashboard')->with('message', 'This is a test success message!');
+})->name('test.alert');
+
+Route::get('/test-alert-error', function () {
+    return redirect()->route('dashboard')->with('error', 'This is a test error message!');
+})->name('test.alert.error');
+
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');

@@ -34,220 +34,266 @@
           </div>
         </div>
 
-        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-          <form @submit.prevent="submit" class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <!-- Leave Type -->
-              <div class="md:col-span-1">
-                <InputLabel for="leave_type_id" value="Leave Type" />
-                <SelectInput id="leave_type_id" v-model="form.leave_type_id" class="mt-1 block w-full" required>
-                  <option value="">Select Leave Type</option>
-                  <option v-for="type in leaveTypes" :key="type.id" :value="type.id">
-                    {{ type.name }}
-                  </option>
-                </SelectInput>
-                <InputError :message="form.errors.leave_type_id" class="mt-2" />
+        <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
+          <form @submit.prevent="submit" class="p-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              <!-- Left Column - Leave Type and Balance -->
+              <div class="lg:col-span-4">
+                <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+                  <InputLabel for="leave_type_id" value="Leave Type" class="text-gray-700 font-medium text-lg mb-2" />
+                  <SelectInput 
+                    id="leave_type_id" 
+                    v-model="form.leave_type_id" 
+                    class="mt-2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base" 
+                    required
+                  >
+                    <option value="">Select Leave Type</option>
+                    <option v-for="type in leaveTypes" :key="type.id" :value="type.id">
+                      {{ type.name }}
+                    </option>
+                  </SelectInput>
+                  <InputError :message="form.errors.leave_type_id" class="mt-2" />
 
-                <!-- Leave Balance Display -->
-                <div v-if="form.leave_type_id" class="mt-2">
-                  <div class="bg-gray-50 p-3 rounded-lg">
-                    <p class="text-sm text-gray-600">
-                      Leave Balance:
-                      <span class="font-semibold">
-                        {{ selectedLeaveBalance?.days_remaining || 0 }} days
-                      </span>
-                      <span class="text-xs text-gray-500 ml-2">
-                        ({{ selectedLeaveBalance?.total_entitled_days || 0 }} days total)
-                      </span>
-                    </p>
-                    <!-- Progress Bar -->
-                    <div class="mt-2 relative">
-                      <div class="w-full bg-gray-200 rounded-full h-1.5">
-                        <div class="h-1.5 rounded-full transition-all duration-300" :class="{
-                          'bg-green-600': (selectedLeaveBalance?.days_remaining / selectedLeaveBalance?.total_entitled_days) * 100 > 60,
-                          'bg-yellow-500': (selectedLeaveBalance?.days_remaining / selectedLeaveBalance?.total_entitled_days) * 100 <= 60 && (selectedLeaveBalance?.days_remaining / selectedLeaveBalance?.total_entitled_days) * 100 > 30,
-                          'bg-red-600': (selectedLeaveBalance?.days_remaining / selectedLeaveBalance?.total_entitled_days) * 100 <= 30
-                        }"
-                          :style="{ width: `${(selectedLeaveBalance?.days_taken / selectedLeaveBalance?.total_entitled_days) * 100 || 0}%` }">
-                        </div>
+                  <!-- Leave Balance Display -->
+                  <div v-if="form.leave_type_id" class="mt-6">
+                    <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
+                      <h3 class="text-lg font-semibold text-gray-900 mb-3">Leave Balance</h3>
+                      <div class="flex items-center justify-between mb-2">
+                        <span class="text-gray-600">Days Remaining</span>
+                        <span class="text-2xl font-bold text-indigo-600">
+                          {{ selectedLeaveBalance?.days_remaining || 0 }}
+                        </span>
                       </div>
-                      <span class="text-xs text-gray-500 mt-1 block text-right">
-                        {{ Math.round((selectedLeaveBalance?.days_taken / selectedLeaveBalance?.total_entitled_days) *
-                        100)
-                        || 0 }}% used
-                      </span>
+                      <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                        <span>Total Entitled Days</span>
+                        <span>{{ selectedLeaveBalance?.total_entitled_days || 0 }}</span>
+                      </div>
+                      <!-- Progress Bar -->
+                      <div class="relative">
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                          <div class="h-3 rounded-full transition-all duration-300" 
+                            :class="{
+                              'bg-green-500': (selectedLeaveBalance?.days_remaining / selectedLeaveBalance?.total_entitled_days) * 100 > 60,
+                              'bg-amber-500': (selectedLeaveBalance?.days_remaining / selectedLeaveBalance?.total_entitled_days) * 100 <= 60 && (selectedLeaveBalance?.days_remaining / selectedLeaveBalance?.total_entitled_days) * 100 > 30,
+                              'bg-red-500': (selectedLeaveBalance?.days_remaining / selectedLeaveBalance?.total_entitled_days) * 100 <= 30
+                            }"
+                            :style="{ width: `${(selectedLeaveBalance?.days_taken / selectedLeaveBalance?.total_entitled_days) * 100 || 0}%` }">
+                          </div>
+                        </div>
+                        <span class="text-xs text-gray-500 mt-2 block text-right">
+                          {{ Math.round((selectedLeaveBalance?.days_taken / selectedLeaveBalance?.total_entitled_days) * 100) || 0 }}% used
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Start Date -->
-              <div class="md:col-span-2">
-                <div class="flex items-center justify-between mb-2">
-                    <InputLabel value="Leave Period" />
-                    <button 
-                      type="button"
-                      @click="isCalendarExpanded = !isCalendarExpanded"
-                      class="text-sm text-gray-500 hover:text-gray-700 focus:outline-none"
-                    >
-                      {{ isCalendarExpanded ? 'Collapse' : 'Expand' }} Calendar
-                    </button>
-                </div>
-
-                    <Transition
-      enter-active-class="transition ease-out duration-200"
-      enter-from-class="opacity-0 scale-95"
-      enter-to-class="opacity-100 scale-100"
-      leave-active-class="transition ease-in duration-100"
-      leave-from-class="opacity-100 scale-100"
-      leave-to-class="opacity-0 scale-95"
-    >
-
-     <div 
-        :class="{ 
-          'fixed inset-0 z-50 bg-gray-900/75 flex items-center justify-center': isCalendarExpanded,
-          'relative': !isCalendarExpanded
-        }"
-      >
-        <div 
-          :class="{
-            'bg-white rounded-lg shadow-xl p-4 max-w-4xl w-full mx-4': isCalendarExpanded,
-            'w-full': !isCalendarExpanded
-          }"
-        > <DatePicker
-            v-model.range="dateRange"
-            mode="range"
-            :min-date="allowBackdate ? null : new Date()"
-            :max-date="maxDate"
-            :attributes="calendarAttributes"
-            :is-expanded="isCalendarExpanded"
-            :trim-weeks="!isCalendarExpanded"
-            class="mt-1 border border-gray-300 rounded-md shadow-sm w-full"
-          />
-          
-          <button
-            v-if="isCalendarExpanded"
-            type="button"
-            @click="isCalendarExpanded = false"
-            class="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-  </Transition>
-
-                <InputError :message="form.errors.start_date || form.errors.end_date" class="mt-2" />
-              </div>
-
-              
-
-              <!-- Duration Preview -->
-              <div class="md:col-span-2">
-                <div class="bg-gray-50 p-4 rounded-lg">
-                  <p class="text-sm text-gray-600">
-                    Duration:
-
-                  <div v-if="durationLoading" class="inline-block">
-                    <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
-                      viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3.5-3.5L12 0v4a8 8 0 01-8 8z">
-                      </path>
-                    </svg>
+              <!-- Right Column - Calendar and Form -->
+              <div class="lg:col-span-8">
+                <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-8">
+                  <div class="flex items-center justify-between mb-4">
+                    <InputLabel value="Leave Period" class="text-gray-700 font-medium text-lg" />
                   </div>
 
-                  <span v-else class="font-semibold text-sm">
-                    {{ duration }}
-                  </span>
-                  </p>
+                  <DatePicker
+                    v-model.range="dateRange"
+                    mode="range"
+                    :min-date="allowBackdate ? null : new Date()"
+                    :max-date="maxDate"
+                    :attributes="calendarAttributes"
+                    :trim-weeks="false"
+                    class="mt-1 border border-gray-300 rounded-xl shadow-sm w-full"
+                    :masks="{ weekdays: 'WWW' }"
+                    :first-day-of-week="1"
+                    :popover="{ visibility: 'click' }"
+                    :panes="2"
+                    :show-adjacent-months="true"
+                    :theme-styles="{
+                      wrapper: 'rounded-xl shadow-lg',
+                      header: 'bg-indigo-50 p-6',
+                      headerTitle: 'text-indigo-900 font-semibold text-xl',
+                      navButton: 'text-indigo-600 hover:bg-indigo-100 rounded-lg p-3',
+                      navButtonIcon: 'text-indigo-600 w-6 h-6',
+                      navButtonPrev: 'text-indigo-600',
+                      navButtonNext: 'text-indigo-600',
+                      weekdays: 'text-indigo-900 font-medium text-base',
+                      day: 'text-gray-700 hover:bg-indigo-50 rounded-lg',
+                      dayContent: 'w-12 h-12 flex items-center justify-center text-base',
+                      dayContentSelected: 'bg-indigo-600 text-white font-semibold',
+                      dayContentToday: 'text-indigo-600 font-semibold',
+                      dayContentHoliday: 'text-red-600 font-medium',
+                      dayContentWeekend: 'text-gray-400'
+                    }"
+                  />
+
+                  <InputError :message="form.errors.start_date || form.errors.end_date" class="mt-2" />
                 </div>
-              </div>
 
-              <!-- Reason -->
-              <div class="md:col-span-2">
-                <InputLabel for="reason" value="Reason" />
-                <TextArea id="reason" v-model="form.reason" class="mt-1 block w-full" rows="4"
-                  placeholder="Please provide a detailed reason for your leave request..." />
-                <InputError :message="form.errors.reason" class="mt-2" />
-              </div>
-
-              <div class="md:col-span-2">
-                <InputLabel for="applicant_comment" value="Additional Comments (Optional)" />
-                <TextArea id="applicant_comment" v-model="form.applicant_comment" class="mt-1 block w-full" rows="3"
-                  placeholder="Any additional information you'd like to provide..." />
-                <InputError :message="form.errors.applicant_comment" class="mt-2" />
-              </div>
-
-              <!-- Replacement Staff -->
-              <div>
-                <InputLabel for="replacement_staff_name" value="Replacement Staff Name" />
-                <TextInput id="replacement_staff_name" v-model="form.replacement_staff_name" class="mt-1 block w-full"
-                  placeholder="Name of staff covering your duties" />
-                <InputError :message="form.errors.replacement_staff_name" class="mt-2" />
-              </div>
-
-              <div>
-                <InputLabel for="replacement_staff_phone" value="Replacement Staff Phone" />
-                <TextInput id="replacement_staff_phone" v-model="form.replacement_staff_phone" class="mt-1 block w-full"
-                  placeholder="Contact number of replacement staff" />
-                <InputError :message="form.errors.replacement_staff_phone" class="mt-2" />
-              </div>
-
-              <!-- Attachment -->
-              <div class="md:col-span-2">
-                <InputLabel for="attachment" value="Supporting Document"
-                  :required="selectedLeaveType?.requires_medical_proof" />
-                <FileInput id="attachment" v-model="form.attachment" class="mt-1 block w-full"
-                  accept=".pdf,.jpg,.jpeg,.png" :disabled="!selectedLeaveType?.requires_medical_proof"
-                  :required="selectedLeaveType?.requires_medical_proof" />
-                <p class="mt-1 text-sm text-gray-500">
-                  <template v-if="selectedLeaveType?.requires_medical_proof">
-                    Medical proof is required for this leave type. Accepted formats: PDF, JPG, JPEG, PNG (max 2MB)
-                  </template>
-                  <template v-else>
-                    Supporting documents are not required for this leave type.
-                  </template>
-                </p>
-                <InputError :message="form.errors.attachment" class="mt-2" />
-              </div>
-
-              <!-- Holidays Section -->
-              <div v-if="holidays.length > 0" class="mt-4">
-                <h3 class="text-lg font-medium text-gray-900">Holidays in Selected Period</h3>
-                <div class="mt-2 bg-yellow-50 border-l-4 border-yellow-400 p-4">
-                  <div class="flex">
-                    <div class="flex-shrink-0">
-                      <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd"
-                          d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                          clip-rule="evenodd" />
+                <!-- Duration Preview -->
+                <div class="bg-indigo-50 p-5 rounded-xl border border-indigo-100 mb-8">
+                  <p class="text-base text-indigo-700">
+                    Duration:
+                    <div v-if="durationLoading" class="inline-block">
+                      <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3.5-3.5L12 0v4a8 8 0 01-8 8z"></path>
                       </svg>
                     </div>
-                    <div class="ml-3">
-                      <p class="text-sm text-yellow-700">
-                        The following holidays fall within your selected leave period:
+                    <span v-else class="font-semibold text-indigo-700 text-lg">
+                      {{ duration }}
+                    </span>
+                  </p>
+                  
+                  <!-- Leave Balance Error Message -->
+                  <div v-if="balanceErrorMessage" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="flex items-center">
+                      <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                      </svg>
+                      <p class="text-sm text-red-700 font-medium">
+                        {{ balanceErrorMessage }}
                       </p>
-                      <ul class="mt-2 text-sm text-yellow-700 list-disc list-inside">
-                        <li v-for="holiday in holidays" :key="holiday.date">
-                          {{ holiday.name }} ({{ formatDate(holiday.date) }})
-                        </li>
-                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <!-- Reason -->
+                  <div class="md:col-span-2">
+                    <label for="reason" class="block text-sm font-semibold text-gray-900 mb-4">
+                      Reason for Leave <span class="text-red-500">*</span>
+                    </label>
+                    <TextArea 
+                      id="reason" 
+                      v-model="form.reason" 
+                      class="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-6 py-4 text-base" 
+                      rows="4"
+                      placeholder="Please provide a detailed reason for your leave request..." 
+                    />
+                    <InputError :message="form.errors.reason" class="mt-3" />
+                  </div>
+
+                  <!-- Additional Comments -->
+                  <div class="md:col-span-2">
+                    <label for="applicant_comment" class="block text-sm font-semibold text-gray-900 mb-4">
+                      Additional Comments
+                    </label>
+                    <TextArea 
+                      id="applicant_comment" 
+                      v-model="form.applicant_comment" 
+                      class="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-6 py-4 text-base" 
+                      rows="3"
+                      placeholder="Any additional information you'd like to provide..." 
+                    />
+                    <InputError :message="form.errors.applicant_comment" class="mt-3" />
+                  </div>
+
+                  <!-- Replacement Staff -->
+                  <div>
+                    <label for="replacement_staff_name" class="block text-sm font-semibold text-gray-900 mb-4">
+                      Replacement Staff Name <span class="text-red-500">*</span>
+                    </label>
+                    <TextInput 
+                      id="replacement_staff_name" 
+                      v-model="form.replacement_staff_name" 
+                      class="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-6 py-4 text-base"
+                      placeholder="Name of staff covering your duties" 
+                    />
+                    <InputError :message="form.errors.replacement_staff_name" class="mt-3" />
+                  </div>
+
+                  <div>
+                    <label for="replacement_staff_phone" class="block text-sm font-semibold text-gray-900 mb-4">
+                      Replacement Staff Phone <span class="text-red-500">*</span>
+                    </label>
+                    <TextInput 
+                      id="replacement_staff_phone" 
+                      v-model="form.replacement_staff_phone" 
+                      class="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-6 py-4 text-base"
+                      placeholder="Contact number of replacement staff" 
+                    />
+                    <InputError :message="form.errors.replacement_staff_phone" class="mt-3" />
+                  </div>
+
+                  <!-- Attachment -->
+                  <div class="md:col-span-2">
+                    <label for="attachment" class="block text-sm font-semibold text-gray-900 mb-4">
+                      Supporting Document
+                      <span v-if="selectedLeaveType?.requires_medical_proof" class="text-red-500">*</span>
+                    </label>
+                    <FileInput 
+                      id="attachment" 
+                      v-model="form.attachment" 
+                      class="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-6 py-4 text-base"
+                      accept=".pdf,.jpg,.jpeg,.png" 
+                      :disabled="!selectedLeaveType?.requires_medical_proof"
+                      :required="selectedLeaveType?.requires_medical_proof" 
+                    />
+                    <p class="mt-4 text-sm text-gray-500">
+                      <template v-if="selectedLeaveType?.requires_medical_proof">
+                        Medical proof is required for this leave type. Accepted formats: PDF, JPG, JPEG, PNG (max 2MB)
+                      </template>
+                      <template v-else>
+                        Supporting documents are not required for this leave type.
+                      </template>
+                    </p>
+                    <InputError :message="form.errors.attachment" class="mt-3" />
+                  </div>
+                </div>
+
+                <!-- Holidays Section -->
+                <div v-if="holidays.length > 0" class="mt-4">
+                  <h3 class="text-lg font-medium text-gray-900">Holidays in Selected Period</h3>
+                  <div class="mt-2 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                    <div class="flex">
+                      <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd"
+                            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                            clip-rule="evenodd" />
+                        </svg>
+                      </div>
+                      <div class="ml-3">
+                        <p class="text-sm text-yellow-700">
+                          The following holidays fall within your selected leave period:
+                        </p>
+                        <ul class="mt-2 text-sm text-yellow-700 list-disc list-inside">
+                          <li v-for="holiday in holidays" :key="holiday.date">
+                            {{ holiday.name }} ({{ formatDate(holiday.date) }})
+                          </li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div class="mt-6 flex justify-end">
-              <SecondaryButton type="button" @click="$inertia.visit(route('leaves.index'))" class="mr-3">
+            <!-- Form buttons -->
+            <div class="mt-8 flex justify-end space-x-4">
+              <SecondaryButton 
+                type="button" 
+                @click="$inertia.visit(route('leaves.index'))" 
+                class="px-6 py-2.5 rounded-lg font-medium"
+              >
                 Cancel
               </SecondaryButton>
-              <SecondaryButton type="button" @click="saveDraft" :class="{ 'opacity-25': form.processing }"
-                :disabled="form.processing" class="mr-3">
+              <SecondaryButton 
+                type="button" 
+                @click="saveDraft" 
+                :class="{ 'opacity-25': form.processing }"
+                :disabled="form.processing" 
+                class="px-6 py-2.5 rounded-lg font-medium bg-gray-100 hover:bg-gray-200 text-gray-700"
+              >
                 Save as Draft
               </SecondaryButton>
-              <PrimaryButton type="submit" :class="{ 'opacity-25': form.processing }" :disabled="isSubmitDisabled">
+              <PrimaryButton 
+                type="submit" 
+                :class="{ 'opacity-25': form.processing }" 
+                :disabled="isSubmitDisabled"
+                class="px-6 py-2.5 rounded-lg font-medium bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
                 Submit Application
               </PrimaryButton>
             </div>
@@ -303,7 +349,6 @@ const props = defineProps({
 const allHolidays = ref([])
 const holidays = ref([])
 const durationLoading = ref(false)
-const isCalendarExpanded = ref(false);
 
 // Add these after your existing refs
 const dateRange = ref({
@@ -461,7 +506,26 @@ const isSubmitDisabled = computed(() => {
          !isBackdatedMedicalValid;
 })
 
+// Add computed property to check if leave balance is insufficient
+const isInsufficientBalance = computed(() => {
+  return selectedLeaveBalance.value && workingDays.value > selectedLeaveBalance.value.days_remaining
+})
+
+// Add computed property for balance error message
+const balanceErrorMessage = computed(() => {
+  if (isInsufficientBalance.value) {
+    return `Insufficient leave balance. You have ${selectedLeaveBalance.value.days_remaining} days remaining but requested ${workingDays.value} days.`
+  }
+  return null
+})
+
 const submit = () => {
+  // Check for insufficient leave balance first
+  if (isInsufficientBalance.value) {
+    proxy.$toast.error(balanceErrorMessage.value)
+    return
+  }
+
   // Set status to pending for submission
   form.status = 'pending'
 
@@ -505,6 +569,8 @@ const submit = () => {
     return
   }
 
+  console.log(form);
+  
   form.post(route('leaves.store'), {
     preserveScroll: true,
     onSuccess: () => {
@@ -616,7 +682,11 @@ watch(dateRange, (newRange) => {
 // Add this helper function
 const formatDateToYYYYMMDD = (date) => {
   if (!date) return '';
-  return date.toISOString().split('T')[0];
+  // Use local date formatting to avoid timezone issues
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 watch(() => form.leave_type_id, (newTypeId) => {
@@ -647,32 +717,122 @@ watch(() => form.replacement_staff_phone, () => {
 
 
 <style>
-.holiday-dot {
-  background-color: red;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-}
-
 .vc-container {
   --vc-background-color: white;
   --vc-border-color: #e5e7eb;
-  --vc-accent-color: #3b82f6;
-  --vc-today-color: #3b82f6;
-  border-radius: 0.375rem;
-   font-size: 1.1em;
+  --vc-accent-color: #4f46e5;
+  --vc-today-color: #4f46e5;
+  --vc-text-color: #374151;
+  --vc-hover-bg-color: #f3f4f6;
+  --vc-selected-bg-color: #4f46e5;
+  --vc-selected-text-color: white;
+  border-radius: 1rem;
+  font-size: 1.2em;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
 .vc-day.is-selected {
-  font-weight: bold;
+  font-weight: 600;
 }
 
+.vc-day.is-today {
+  font-weight: 600;
+  color: var(--vc-today-color);
+}
+
+.vc-day.is-holiday {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.vc-day.is-weekend {
+  color: #9ca3af;
+}
+
+.vc-header {
+  padding: 1.5rem;
+  font-weight: 600;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.vc-weeks {
+  padding: 1.5rem;
+}
+
+.vc-day-content {
+  font-weight: 500;
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  transition: all 0.2s ease-in-out;
+}
+
+.vc-day-content:hover {
+  background-color: var(--vc-hover-bg-color);
+  transform: scale(1.1);
+}
+
+.vc-day.is-selected .vc-day-content {
+  background-color: var(--vc-selected-bg-color);
+  color: var(--vc-selected-text-color);
+  transform: scale(1.1);
+}
+
+.vc-nav-btn {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.vc-nav-btn:hover {
+  background-color: var(--vc-hover-bg-color);
+  transform: scale(1.05);
+}
+
+.vc-popover-content {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  padding: 1rem;
+}
+
+.vc-popover-content-wrapper {
+  border: none;
+}
+
+.vc-popover-caret {
+  display: none;
+}
 
 .dark .vc-container {
   --vc-background-color: #1f2937;
   --vc-border-color: #374151;
-  --vc-accent-color: #3b82f6;
-  --vc-today-color: #3b82f6;
+  --vc-accent-color: #4f46e5;
+  --vc-today-color: #4f46e5;
+  --vc-text-color: #e5e7eb;
+  --vc-hover-bg-color: #374151;
+  --vc-selected-bg-color: #4f46e5;
+  --vc-selected-text-color: white;
 }
 
+@keyframes dateSelect {
+  0% {
+    transform: scale(0.95);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+
+}
+
+.vc-day.is-selected .vc-day-content {
+  animation: dateSelect 0.2s ease-in-out;
+}
 </style>

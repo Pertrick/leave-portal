@@ -38,9 +38,7 @@ class LeaveApplicationService
     private function validateUserAssignments(User $user): void
     {
         // Check if user has an active supervisor
-        $hasSupervisor = $user->supervisors()
-            ->where('is_active', true)
-            ->exists();
+        $hasSupervisor = $user->activeSupervisors()->exists();
 
         if (!$hasSupervisor) {
             throw new \InvalidArgumentException('You do not have an active supervisor assigned. Please contact HR.');
@@ -306,28 +304,60 @@ class LeaveApplicationService
      */
     private function validateLeaveDates(Carbon $startDate, Carbon $endDate, ?int $locationId = null): void
     {
-        if ($startDate->isWeekend()) {
-            throw new \InvalidArgumentException('Leave cannot start on a weekend.');
-        }
-
-        if ($endDate->isWeekend()) {
-            throw new \InvalidArgumentException('Leave cannot end on a weekend.');
-        }
-
-        if ($this->isHoliday($startDate, $locationId)) {
-            throw new \InvalidArgumentException('Leave cannot start on a holiday.');
-        }
-
-        if ($this->isHoliday($endDate, $locationId)) {
-            throw new \InvalidArgumentException('Leave cannot end on a holiday.');
-        }
-
-        if ($startDate->gt($endDate)) {
-            throw new \InvalidArgumentException('Start date cannot be after end date.');
-        }
-
-        if ($startDate->lt(now()->startOfDay())) {
-            throw new \InvalidArgumentException('Start date cannot be in the past.');
+        $validationSettings = config('leave.validation');
+        
+        try {
+            // Check if start date is on weekend (if enabled)
+            if ($validationSettings['prevent_weekend_start'] && $startDate->isWeekend()) {
+                throw new \InvalidArgumentException('Leave cannot start on a weekend.');
+            }
+    
+            // Check if end date is on weekend (if enabled)
+            if ($validationSettings['prevent_weekend_end'] && $endDate->isWeekend()) {
+                throw new \InvalidArgumentException('Leave cannot end on a weekend.');
+            }
+    
+            // Check if start date is on holiday (if enabled)
+            if ($validationSettings['prevent_holiday_start'] && $this->isHoliday($startDate, $locationId)) {
+                throw new \InvalidArgumentException('Leave cannot start on a holiday.');
+            }
+    
+            // Check if end date is on holiday (if enabled)
+            if ($validationSettings['prevent_holiday_end'] && $this->isHoliday($endDate, $locationId)) {
+                throw new \InvalidArgumentException('Leave cannot end on a holiday.');
+            }
+    
+            // Check if start date is after end date
+            if ($startDate->gt($endDate)) {
+                throw new \InvalidArgumentException('Start date cannot be after end date.');
+            }
+    
+            // Check if start date is in the past (if enabled)
+            if ($validationSettings['prevent_past_dates']) {
+                $today = now()->startOfDay();
+                
+                // For medical leave, allow backdating if configured
+                if ($validationSettings['allow_backdated_medical']) {
+                    $backdateLimit = $validationSettings['backdated_medical_days_limit'];
+                    $earliestAllowedDate = now()->subDays($backdateLimit)->startOfDay();
+                    
+                    if ($startDate->lt($earliestAllowedDate)) {
+                        throw new \InvalidArgumentException("Start date cannot be more than {$backdateLimit} days in the past.");
+                    }
+                } else {
+                    if ($startDate->lt($today)) {
+                        throw new \InvalidArgumentException('Start date cannot be in the past.');
+                    }
+                }
+            }
+        } catch(\Exception $e) {
+            Log::error('Leave date validation failed: ' . $e->getMessage(), [
+                'start_date' => $startDate->toDateString(),
+                'end_date' => $endDate->toDateString(),
+                'location_id' => $locationId,
+                'validation_settings' => $validationSettings
+            ]);
+            throw $e;
         }
     }
 

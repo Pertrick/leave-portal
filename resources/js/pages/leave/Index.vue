@@ -32,7 +32,7 @@
     <div class="py-12">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <!-- Stats Overview -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
             <div class="flex items-center">
               <div class="p-3 rounded-full bg-blue-100 text-blue-600">
@@ -72,6 +72,19 @@
               </div>
             </div>
           </div>
+          <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+            <div class="flex items-center">
+              <div class="p-3 rounded-full bg-gray-100 text-gray-600">
+                <XCircleIcon class="w-6 h-6" />
+              </div>
+              <div class="ml-4">
+                <h3 class="text-lg font-semibold text-gray-900">Cancelled</h3>
+                <p class="text-2xl font-bold text-gray-600">
+                  {{ leaves.filter(l => l.status === 'cancelled').length }}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Leave Applications Table -->
@@ -88,6 +101,7 @@
                   <option value="pending">Pending</option>
                   <option value="approved">Approved</option>
                   <option value="rejected">Rejected</option>
+                  <option value="cancelled">Cancelled</option>
                 </select>
                 <select
                   v-model="typeFilter"
@@ -144,6 +158,7 @@
                       <span
                         :class="{
                           'px-2 inline-flex text-xs leading-5 font-semibold rounded-full': true,
+                          'bg-gray-100 text-gray-800': leave.status === 'cancelled',
                           'bg-yellow-100 text-yellow-800': leave.status === 'pending',
                           'bg-green-100 text-green-800': leave.status === 'approved',
                           'bg-red-100 text-red-800': leave.status === 'rejected'

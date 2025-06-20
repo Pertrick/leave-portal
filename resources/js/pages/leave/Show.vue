@@ -34,6 +34,7 @@
               <span
                 :class="{
                   'px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full': true,
+                  'bg-gray-100 text-gray-800': leave.status === 'cancelled',
                   'bg-yellow-100 text-yellow-800': leave.status === 'pending',
                   'bg-green-100 text-green-800': leave.status === 'approved',
                   'bg-red-100 text-red-800': leave.status === 'rejected'
@@ -99,11 +100,31 @@
                   <p class="mt-1 text-sm text-gray-900">{{ leave.user.name }}</p>
                 </div>
 
-                <div v-if="leave.approvals.length > 0">
+                <div v-if="leave.approvals.length > 0 || leave.status === 'cancelled'">
                   <h3 class="text-sm font-medium text-gray-500">Approval History</h3>
                   <div class="mt-2 space-y-3">
+                    <!-- Cancellation Entry -->
+                    <div v-if="leave.status === 'cancelled'" class="flex items-start space-x-3">
+                      <div class="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-gray-400"></div>
+                      <div>
+                        <p class="text-sm text-gray-900">
+                          {{ leave.user.name }}
+                          <span class="ml-2 text-xs font-medium text-gray-600">
+                            Cancelled
+                          </span>
+                        </p>
+                        <p class="text-xs text-gray-500">
+                          {{ formatDateTime(leave.updated_at) }}
+                        </p>
+                        <p v-if="leave.cancellation_reason" class="mt-1 text-sm text-gray-600">
+                          {{ leave.cancellation_reason }}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <!-- Regular Approval Entries -->
                     <div
-                      v-for="approval in leave.approvals"
+                      v-for="approval in leave.approvals.filter(a => a.status !== 'pending')"
                       :key="approval.id"
                       class="flex items-start space-x-3"
                     >
