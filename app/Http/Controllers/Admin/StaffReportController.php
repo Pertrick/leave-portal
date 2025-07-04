@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Leave;
 use App\Models\Department;
-use App\Models\LeaveType;
 use App\Exports\StaffLeaveReportExport;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -82,11 +81,11 @@ class StaffReportController extends Controller
                 'entitlements' => $leaveBalances->map(function ($balance) {
                     return [
                         'type' => $balance->leaveType->name,
-                        'total' => $balance->total_days,
-                        'used' => $balance->used_days,
-                        'remaining' => $balance->remaining_days,
-                        'percentage_used' => $balance->total_days > 0 
-                            ? round(($balance->used_days / $balance->total_days) * 100, 1) 
+                        'total' => $balance->total_entitled_days,
+                        'used' => $balance->days_taken,
+                        'remaining' => $balance->days_remaining,
+                        'percentage_used' => $balance->total_entitled_days > 0 
+                            ? round(($balance->days_taken / $balance->total_entitled_days) * 100, 1) 
                             : 0
                     ];
                 }),
@@ -121,14 +120,14 @@ class StaffReportController extends Controller
         return Inertia::render('Admin/StaffReport', [
             'users' => $users,
             'departments' => Department::all(),
-            'leaveTypes' => LeaveType::all(),
             'filters' => $request->only([
                 'department',
                 'search'
             ]),
             'userLeaveStats' => $userLeaveStats,
             'userRole' => auth()->user()->roles->first()->name,
-            'currentYear' => $currentYear
+            'currentYear' => $currentYear,
+            'userDepartment' => auth()->user()->department
         ]);
     }
 
@@ -190,9 +189,9 @@ class StaffReportController extends Controller
 
             // Add leave entitlements
             foreach ($leaveBalances as $balance) {
-                $row[$balance->leaveType->name . ' Total'] = $balance->total_days;
-                $row[$balance->leaveType->name . ' Used'] = $balance->used_days;
-                $row[$balance->leaveType->name . ' Remaining'] = $balance->remaining_days;
+                $row[$balance->leaveType->name . ' Total'] = $balance->total_entitled_days;
+                $row[$balance->leaveType->name . ' Used'] = $balance->days_taken;
+                $row[$balance->leaveType->name . ' Remaining'] = $balance->days_remaining;
             }
 
             // Add summary

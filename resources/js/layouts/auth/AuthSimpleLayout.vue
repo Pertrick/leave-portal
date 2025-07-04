@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { Link } from '@inertiajs/vue3';
+import Alert from '@/components/Alert.vue';
 
 defineProps<{
     title?: string;
@@ -9,20 +10,19 @@ defineProps<{
 </script>
 
 <template>
-    <div class="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
-        <div class="w-full max-w-4xl">
-            <div class="flex flex-col gap-8">
-                <div class="flex flex-col items-center gap-4">
-                    <Link :href="route('home')" class="flex flex-col items-center gap-2 font-medium">
-                        <div class="mb-1 flex h-9 w-9 items-center justify-center rounded-md">
-                            <AppLogoIcon class="size-9 fill-current text-[var(--foreground)] dark:text-white" />
-                        </div>
-                        <span class="sr-only">{{ title }}</span>
-                    </Link>
-                    <div class="space-y-2 text-center">
-                        <h1 class="text-xl font-medium">{{ title }}</h1>
-                        <p class="text-center text-sm text-muted-foreground">{{ description }}</p>
-                    </div>
+    <Alert />
+    <div class="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
+        <div class="flex w-full max-w-md flex-col gap-6">
+            <Link :href="route('home')" class="flex items-center gap-2 self-center font-medium">
+                <div class="flex h-9 w-9 items-center justify-center">
+                    <AppLogoIcon class="size-9 fill-current text-black dark:text-white" />
+                </div>
+            </Link>
+
+            <div class="flex flex-col gap-6">
+                <div class="text-center">
+                    <h1 class="text-xl font-semibold">{{ title }}</h1>
+                    <p class="text-sm text-muted-foreground">{{ description }}</p>
                 </div>
                 <slot />
             </div>

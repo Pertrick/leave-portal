@@ -5,6 +5,7 @@ import { type NavigationItem } from '@/types';
 import Sidebar from '@/components/Sidebar.vue';
 import Header from '@/components/Header.vue';
 import Alert from '@/components/Alert.vue';
+import BackButton from '@/components/BackButton.vue';
 
 const props = defineProps<{
     title?: string;
@@ -42,6 +43,8 @@ const currentTitle = computed(() => {
     
     return parent?.title || 'Dashboard';
 });
+
+const page = usePage();
 </script>
 
 <template>
@@ -58,8 +61,10 @@ const currentTitle = computed(() => {
                         <slot name="header-actions" />
                     </template>
                 </Header>
-                
                 <main class="flex-1 overflow-y-auto">
+                    <div class="p-4">
+                        <BackButton v-if="($page.url.includes('/show') || $page.url.includes('/details')) && !$page.url.startsWith('/dashboard') && !$page.url.startsWith('/')" />
+                    </div>
                     <slot />
                 </main>
             </div>

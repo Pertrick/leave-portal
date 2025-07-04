@@ -18,15 +18,7 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
-// Test route for alerts
 
-Route::get('/test-alert', function () {
-    return redirect()->route('dashboard')->with('message', 'This is a test success message!');
-})->name('test.alert');
-
-Route::get('/test-alert-error', function () {
-    return redirect()->route('dashboard')->with('error', 'This is a test error message!');
-})->name('test.alert.error');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', function () {
@@ -73,6 +65,14 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/departments/{department}', [DepartmentController::class, 'update'])->name('departments.update');
         Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
         Route::put('/departments/{department}/toggle-status', [DepartmentController::class, 'toggleStatus'])->name('departments.toggle-status');
+
+        // Leave Entitlement Management
+        Route::get('/leave-entitlements', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'index'])->name('leave-entitlements.index');
+        Route::post('/leave-entitlements', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'store'])->name('leave-entitlements.store');
+        Route::put('/leave-entitlements/{entitlement}', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'update'])->name('leave-entitlements.update');
+        Route::delete('/leave-entitlements/{entitlement}', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'destroy'])->name('leave-entitlements.destroy');
+        Route::put('/leave-entitlements/{entitlement}/toggle-status', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'toggleStatus'])->name('leave-entitlements.toggle-status');
+        Route::post('/leave-entitlements/bulk-update', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'bulkUpdate'])->name('leave-entitlements.bulk-update');
 
         // Dashboard
         Route::get('/dashboard', function () {
@@ -126,7 +126,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('staff.leave-balances.update');
 
 
-        Route::middleware(['role:admin|hr'])->group(function () {
+        Route::middleware(['role:admin|hr|supervisor'])->group(function () {
             Route::get('/leave/balances', [LeaveBalanceController::class, 'index'])->name('leave.balances.index');
             Route::get('/leave/balances/export', [LeaveBalanceController::class, 'export'])->name('leave.balances.export');
 

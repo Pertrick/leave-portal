@@ -39,6 +39,24 @@ class HandleInertiaRequests extends Middleware
     {
         [$message, $author] = str(\Illuminate\Foundation\Inspiring::quotes()->random())->explode('-');
 
+        // Get flash messages and clear them
+        $alert = null;
+        $session = $request->session();
+        
+        if ($session->has('success')) {
+            $alert = ['type' => 'success', 'message' => $session->get('success')];
+            $session->forget('success');
+        } elseif ($session->has('error')) {
+            $alert = ['type' => 'error', 'message' => $session->get('error')];
+            $session->forget('error');
+        } elseif ($session->has('warning')) {
+            $alert = ['type' => 'warning', 'message' => $session->get('warning')];
+            $session->forget('warning');
+        } elseif ($session->has('info')) {
+            $alert = ['type' => 'info', 'message' => $session->get('info')];
+            $session->forget('info');
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -51,14 +69,7 @@ class HandleInertiaRequests extends Middleware
                 'location' => $request->url(),
             ],
             'sidebarOpen' => !$request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-            'alert' => fn() => match (true) {
-                $request->session()->has('success') => ['type' => 'success', 'message' => $request->session()->get('success')],
-                $request->session()->has('error') => ['type' => 'error', 'message' => $request->session()->get('error')],
-                $request->session()->has('warning') => ['type' => 'warning', 'message' => $request->session()->get('warning')],
-                $request->session()->has('info') => ['type' => 'info', 'message' => $request->session()->get('info')],
-                default => null,
-            }
-
+            'alert' => $alert,
         ];
     }
 

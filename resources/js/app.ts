@@ -9,6 +9,7 @@ import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
 import Toast from 'vue-toastification';
 import { ToastPlugin } from './plugins/toast';
+import { ToastService } from './services/toast';
 import 'vue-toastification/dist/index.css';
 import { vClickOutside } from './directives/click-outside';
 import VCalendar from 'v-calendar';
@@ -48,6 +49,9 @@ createInertiaApp({
             })
             .directive('click-outside', vClickOutside)
             .mount(el);
+
+        // Initialize ToastService after app is mounted
+        ToastService.initialize();
     },
     progress: {
         color: '#4B5563',

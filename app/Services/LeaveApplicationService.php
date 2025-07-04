@@ -39,13 +39,16 @@ class LeaveApplicationService
     {
         // Check if user has an active supervisor
         $hasSupervisor = $user->activeSupervisors()->exists();
+        $hasHOD = $user->department && $user->department->activeHead()->exists();
+
+        // If user is a supervisor and has no supervisor, but has a HOD, allow (skip supervisor approval, go to HOD)
+        if ($user->hasRole('supervisor') && !$hasSupervisor && $hasHOD) {
+            return;
+        }
 
         if (!$hasSupervisor) {
             throw new \InvalidArgumentException('You do not have an active supervisor assigned. Please contact HR.');
         }
-
-        // Check if user's department has an active head
-        $hasHOD = $user->department && $user->department->activeHead()->exists();
 
         if (!$hasHOD) {
             throw new \InvalidArgumentException('Your department does not have an active head assigned. Please contact HR.');
@@ -103,7 +106,9 @@ class LeaveApplicationService
                 'calendar_days' => $calendarDays,
                 'working_days' => $workingDays,
                 'status' => 'pending',
-                'location_id' => $user->location_id,
+                'applicant_comment' => $data['applicant_comment'],
+                'replacement_staff_name' => $data['replacement_staff_name'],
+                'replacement_staff_phone' => $data['replacement_staff_phone'],
                 'holidays' => $holidays->pluck('name')->toArray(),
                 'attachment' => $data['attachment'] ?? null
             ]);
@@ -124,6 +129,11 @@ class LeaveApplicationService
                 // Get approvers for this level
                 $approvers = $this->getApprovers($level);
                 
+                // If supervisor level and no approvers, skip to next level
+                if ($level->role_name === 'supervisor' && $approvers->isEmpty()) {
+                    continue;
+                }
+                // For other levels, throw error if no approvers
                 if ($approvers->isEmpty()) {
                     throw new \InvalidArgumentException("No approvers found for level {$level->name}");
                 }
@@ -138,8 +148,8 @@ class LeaveApplicationService
                         'level_id' => $level->id
                     ]);
 
-                    // Store the first approval record
-                    if ($level->level === $approvalLevels->first()->level && !$firstApproval) {
+                    // Store the first approval record (regardless of level)
+                    if (!$firstApproval) {
                         $firstApproval = $leaveApproval;
                     }
                 }
@@ -149,12 +159,24 @@ class LeaveApplicationService
                 throw new \Exception('Failed to create initial approval record');
             }
 
-            // Set the current approval level to the first level
-            $firstLevel = $approvalLevels->first();
+            // Set the current approval level to the level of the first actual approval record
+            $firstLevel = $firstApproval->approvalLevel; // get the actual level of the first approval record
             $leave->update([
                 'current_approval_level' => $firstLevel->name,
                 'current_approval_id' => $firstApproval->id
             ]);
+
+            // Hybrid auto-approval for HODs
+            if ($this->shouldAutoApproveHOD($user, $leave)) {
+                $leave->status = Leave::STATUS_APPROVED;
+                $leave->save();
+                // Mark all approvals as approved
+                foreach ($leave->approvals as $approval) {
+                    $approval->status = 'approved';
+                    $approval->action_date = now();
+                    $approval->save();
+                }
+            }
 
             DB::commit();
             return $leave;
@@ -223,7 +245,9 @@ class LeaveApplicationService
                 'calendar_days' => $calendarDays,
                 'working_days' => $workingDays,
                 'status' => 'pending',
-                'location_id' => $user->location_id,
+                'applicant_comment' => $data['applicant_comment'],
+                'replacement_staff_name' => $data['replacement_staff_name'],
+                'replacement_staff_phone' => $data['replacement_staff_phone'],
                 'holidays' => $holidays->pluck('name')->toArray(),
                 'attachment' => $data['attachment'] ?? null
             ]);
@@ -263,8 +287,8 @@ class LeaveApplicationService
                 }
             }
 
-            // Set the current approval level to the first level
-            $firstLevel = $approvalLevels->first();
+            // Set the current approval level to the level of the first actual approval record
+            $firstLevel = $firstApproval->approvalLevel; // get the actual level of the first approval record
             $leave->update([
                 'current_approval_level' => $firstLevel->name,
             ]);
@@ -812,5 +836,15 @@ class LeaveApplicationService
                 )
             );
         }
+    }
+
+    /**
+     * Determine if HOD leave should be auto-approved (hybrid logic)
+     */
+    private function shouldAutoApproveHOD(User $user, Leave $leave): bool
+    {
+        $isHOD = $user->hasRole('hod') || (method_exists($user, 'isDepartmentHead') && $user->isDepartmentHead());  
+        $hasPending = $leave->approvals()->where('status', 'pending')->exists();
+        return $isHOD && !$hasPending;
     }
 } 

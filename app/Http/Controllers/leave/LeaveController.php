@@ -117,7 +117,7 @@ class LeaveController extends Controller
 
     public function show(Leave $leave): Response
     {
-        $leave->load(['leaveType', 'approvals.user', 'user']);
+        $leave->load(['leaveType', 'approvals.approver', 'user']);
         $leave = $this->leaveService->getLeaveWithFormattedAttachment($leave);
 
         return Inertia::render('leave/Show', [

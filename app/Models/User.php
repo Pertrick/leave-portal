@@ -187,24 +187,42 @@ class User extends Authenticatable
         return $this->hasRole('settings-manager') || $this->hasRole('admin');
     }
 
-    public function supervisor()
+    // Get the supervisor(s) for this user, filtered by department
+    public function supervisors()
     {
-        return $this->hasOne(Supervisor::class, 'user_id');
+        return $this->belongsToMany(
+            User::class,
+            'supervisors',
+            'user_id',
+            'supervisor_id'
+        )
+        ->wherePivot('department_id', $this->department_id)
+        ->withPivot('department_id')
+        ->select('users.*');
+    }
+
+    // Get the users this user supervises, filtered by department
+    public function supervisedUsers()
+    {
+        return $this->belongsToMany(
+            User::class,
+            'supervisors',
+            'supervisor_id',
+            'user_id'
+        )
+        ->wherePivot('department_id', $this->department_id)
+        ->withPivot('department_id')
+        ->select('users.*');
     }
 
     public function activeSupervisors()
     {
-        return $this->supervisor()->where('is_active', true);
+        return $this->supervisors()->where('is_active', true);
     }
 
     public function primarySupervisor()
     {
         return $this->activeSupervisors()->where('is_primary', true)->first();
-    }
-
-    public function supervisedUsers()
-    {
-        return $this->hasMany(Supervisor::class, 'supervisor_id');
     }
 
     public function activeSupervisedUsers()

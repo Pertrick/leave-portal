@@ -97,7 +97,7 @@
               <div class="space-y-4">
                 <div>
                   <h3 class="text-sm font-medium text-gray-500">Applicant</h3>
-                  <p class="mt-1 text-sm text-gray-900">{{ leave.user.name }}</p>
+                  <p class="mt-1 text-sm text-gray-900">{{ leave.user.firstname }} {{ leave.user.lastname }}</p>
                 </div>
 
                 <div v-if="leave.approvals.length > 0 || leave.status === 'cancelled'">
@@ -108,7 +108,7 @@
                       <div class="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-gray-400"></div>
                       <div>
                         <p class="text-sm text-gray-900">
-                          {{ leave.user.name }}
+                          {{ leave.user.firstname }} {{ leave.user.lastname }}
                           <span class="ml-2 text-xs font-medium text-gray-600">
                             Cancelled
                           </span>
@@ -124,7 +124,7 @@
                     
                     <!-- Regular Approval Entries -->
                     <div
-                      v-for="approval in leave.approvals.filter(a => a.status !== 'pending')"
+                      v-for="approval in leave.approvals"
                       :key="approval.id"
                       class="flex items-start space-x-3"
                     >
@@ -138,7 +138,7 @@
                       ></div>
                       <div>
                         <p class="text-sm text-gray-900">
-                          {{ approval.user.name }}
+                          {{ approval.approver.firstname }} {{ approval.approver.lastname }}
                           <span
                             :class="{
                               'ml-2 text-xs font-medium': true,
