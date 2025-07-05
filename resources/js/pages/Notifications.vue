@@ -270,7 +270,25 @@ const loadNotifications = async (reset = false) => {
       notifications.value = []
     }
     
-    const response = await fetch(`/api/notifications?page=${page.value}`)
+    const response = await fetch(`/api/notifications?page=${page.value}`, {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const contentType = response.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text()
+      console.error('Non-JSON response:', text)
+      throw new Error('Server returned non-JSON response')
+    }
+    
     const data = await response.json()
     
     if (reset) {
@@ -284,6 +302,10 @@ const loadNotifications = async (reset = false) => {
     hasMore.value = data.notifications.length === 20
   } catch (error) {
     console.error('Failed to load notifications:', error)
+    // Show user-friendly error message
+    notifications.value = []
+    unreadCount.value = 0
+    totalCount.value = 0
   } finally {
     loading.value = false
   }
@@ -295,16 +317,30 @@ const refreshNotifications = async () => {
 
 const markAsRead = async (notification) => {
   try {
-    await fetch(`/api/notifications/${notification.id}/mark-read`, {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+    if (!csrfToken) {
+      console.error('CSRF token not found')
+      return
+    }
+
+    const response = await fetch(`/api/notifications/${notification.id}/mark-read`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        'X-CSRF-TOKEN': csrfToken,
+        'Accept': 'application/json'
       }
     })
-    
-    notification.read_at = new Date().toISOString()
-    unreadCount.value = Math.max(0, unreadCount.value - 1)
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+    if (result.success) {
+      notification.read_at = new Date().toISOString()
+      unreadCount.value = Math.max(0, unreadCount.value - 1)
+    }
   } catch (error) {
     console.error('Failed to mark notification as read:', error)
   }
@@ -312,18 +348,32 @@ const markAsRead = async (notification) => {
 
 const markAllAsRead = async () => {
   try {
-    await fetch('/api/notifications/mark-all-read', {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+    if (!csrfToken) {
+      console.error('CSRF token not found')
+      return
+    }
+
+    const response = await fetch('/api/notifications/mark-all-read', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        'X-CSRF-TOKEN': csrfToken,
+        'Accept': 'application/json'
       }
     })
-    
-    notifications.value.forEach(notification => {
-      notification.read_at = new Date().toISOString()
-    })
-    unreadCount.value = 0
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+    if (result.success) {
+      notifications.value.forEach(notification => {
+        notification.read_at = new Date().toISOString()
+      })
+      unreadCount.value = 0
+    }
   } catch (error) {
     console.error('Failed to mark all notifications as read:', error)
   }
@@ -338,21 +388,35 @@ const confirmDelete = async () => {
   if (!notificationToDelete.value) return
   
   try {
-    await fetch(`/api/notifications/${notificationToDelete.value.id}`, {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+    if (!csrfToken) {
+      console.error('CSRF token not found')
+      return
+    }
+
+    const response = await fetch(`/api/notifications/${notificationToDelete.value.id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        'X-CSRF-TOKEN': csrfToken,
+        'Accept': 'application/json'
       }
     })
-    
-    const index = notifications.value.findIndex(n => n.id === notificationToDelete.value.id)
-    if (index > -1) {
-      notifications.value.splice(index, 1)
-      if (!notificationToDelete.value.read_at) {
-        unreadCount.value = Math.max(0, unreadCount.value - 1)
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+    if (result.success) {
+      const index = notifications.value.findIndex(n => n.id === notificationToDelete.value.id)
+      if (index > -1) {
+        notifications.value.splice(index, 1)
+        if (!notificationToDelete.value.read_at) {
+          unreadCount.value = Math.max(0, unreadCount.value - 1)
+        }
+        totalCount.value = Math.max(0, totalCount.value - 1)
       }
-      totalCount.value = Math.max(0, totalCount.value - 1)
     }
   } catch (error) {
     console.error('Failed to delete notification:', error)
@@ -368,17 +432,31 @@ const deleteAllNotifications = () => {
 
 const confirmDeleteAll = async () => {
   try {
-    await fetch('/api/notifications/delete-all', {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+    if (!csrfToken) {
+      console.error('CSRF token not found')
+      return
+    }
+
+    const response = await fetch('/api/notifications/delete-all', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        'X-CSRF-TOKEN': csrfToken,
+        'Accept': 'application/json'
       }
     })
-    
-    notifications.value = []
-    unreadCount.value = 0
-    totalCount.value = 0
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+    if (result.success) {
+      notifications.value = []
+      unreadCount.value = 0
+      totalCount.value = 0
+    }
   } catch (error) {
     console.error('Failed to delete all notifications:', error)
   } finally {

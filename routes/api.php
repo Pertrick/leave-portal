@@ -22,13 +22,18 @@ use App\Models\Holiday;
 
 Route::middleware(['auth', 'web'])->group(function () {
     Route::get('/holidays', [HolidayController::class, 'getHolidays'])->name('api.holidays');
+    
+    // Notification routes
     Route::get('/notifications', [NotificationController::class, 'index']);
-    Route::post('/notifications/{notification}/mark-read', [NotificationController::class, 'markAsRead']);
     Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+    Route::post('/notifications/{notification}/mark-read', [NotificationController::class, 'markAsRead']);
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy']);
+    Route::delete('/notifications/delete-all', [NotificationController::class, 'deleteAll']);
 });
 
 Route::get('/supervisors/{supervisor}/users', [SupervisorController::class, 'getSupervisedUsers']);
 Route::get('/range/holidays', [HolidayController::class, 'getHolidaysInRange'])->name('api.inrange.holidays');
+
 Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_middleware', 'inertia')
@@ -36,15 +41,6 @@ Route::middleware([
     Route::get('/dashboard', function () {
         return view('dashboard');
     })->name('dashboard');
-});
-
-// Notification routes
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/notifications', [NotificationController::class, 'index']);
-    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
-    Route::post('/notifications/{notification}/mark-read', [NotificationController::class, 'markAsRead']);
-    Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy']);
-    Route::delete('/notifications/delete-all', [NotificationController::class, 'deleteAll']);
 });
 
 require __DIR__.'/auth.php'; 
