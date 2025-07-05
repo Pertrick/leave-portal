@@ -2,6 +2,7 @@
 defineProps<{
     title: string;
     description?: string;
+    companyName?: string;
 }>();
 </script>
 
@@ -10,8 +11,7 @@ defineProps<{
         <div class="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
             <div class="absolute inset-0 bg-zinc-900" />
             <div class="relative z-20 flex items-center text-lg font-medium">
-                <img src="/logo.png" alt="Logo" class="h-8 w-8 mr-2" />
-                Leave Portal
+                <img src="/images/euromega-logo.png" alt="Company Logo" class="h-8 w-30 mr-2" />
             </div>
             <div class="relative z-20 mt-auto">
                 <blockquote class="space-y-2">

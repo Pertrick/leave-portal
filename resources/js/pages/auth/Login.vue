@@ -6,13 +6,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 import { getCurrentInstance } from 'vue';
 import { useFlash } from '@/composables/useFlash';
 
 const { flash } = useFlash()
 const { proxy } = getCurrentInstance()
+const page = usePage();
 
 defineProps<{
     status?: string;
@@ -38,7 +39,11 @@ const submit = () => {
 </script>
 
 <template>
-    <AuthBase title="Log in to your account" description="Enter your email or staff ID and password below to log in">
+    <AuthBase 
+        title="Log in to your account" 
+        description="Enter your email or staff ID and password below to log in"
+        :company-name="page.props.companyName || 'Leave Portal'"
+    >
         <Head title="Log in" />
 
         <div v-if="status" class="mb-4 text-center text-sm font-medium text-green-600">

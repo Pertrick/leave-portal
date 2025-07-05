@@ -68,8 +68,11 @@
 
                             <div>
                                 <h4 class="text-sm font-medium text-gray-500">Supervisor</h4>
-                                {{}}
-                                <p class="mt-1 text-sm text-gray-900">{{ user.supervisor?.supervisor ? `${user.supervisor?.supervisor?.firstname} ${user.supervisor?.supervisor?.lastname}` : 'Not assigned' }}</p>
+                                <p class="mt-1 text-sm text-gray-900">
+                                    {{ user.active_supervisors && user.active_supervisors.length > 0 
+                                        ? user.active_supervisors.map(s => `${s.firstname} ${s.lastname}`).join(', ')
+                                        : 'Not assigned' }}
+                                </p>
                             </div>
 
                             <div>

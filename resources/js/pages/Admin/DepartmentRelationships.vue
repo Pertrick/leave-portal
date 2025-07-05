@@ -192,15 +192,6 @@
                             </svg>
                           </button>
                     <button
-                      @click="updateSupervisor(supervisor)"
-                      class="text-indigo-600 hover:text-indigo-900"
-                            title="Update"
-                    >
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                    </button>
-                    <button
                       @click="deactivateSupervisor(supervisor)"
                       class="text-red-600 hover:text-red-900"
                             title="Deactivate"
@@ -487,6 +478,44 @@
             </div>
           </div>
           
+          <!-- Add Users Section -->
+          <div class="mb-6">
+            <h3 class="text-md font-medium text-gray-900 mb-3">Add Users</h3>
+            <div class="mb-3">
+              <Multiselect
+                v-model="addUsersForm.user_ids"
+                :options="availableUsersForSupervisor.map(user => ({
+                  value: user.id,
+                  label: `${user.firstname} ${user.lastname}`,
+                  description: user.designation
+                }))"
+                mode="multiple"
+                :searchable="true"
+                track-by="value"
+                label="label"
+                placeholder="Select users to add"
+                class="multiselect-blue"
+              >
+                <template v-slot:option="{ option }">
+                  <div class="flex items-center">
+                    <div class="flex-1">
+                      <div class="text-sm font-medium text-gray-900">{{ option.label }}</div>
+                      <div class="text-xs text-gray-500">{{ option.description }}</div>
+                    </div>
+                  </div>
+                </template>
+              </Multiselect>
+            </div>
+            <button
+              @click="addUsersToSupervisor"
+              :disabled="!addUsersForm.user_ids || addUsersForm.user_ids.length === 0 || addUsersForm.processing"
+              class="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="addUsersForm.processing">Adding...</span>
+              <span v-else>Add Users</span>
+            </button>
+          </div>
+          
           <div>
             <h3 class="text-md font-medium text-gray-900 mb-3">Supervised Users</h3>
             <div v-if="loadingUsers" class="text-center py-4">
@@ -495,19 +524,30 @@
             </div>
             <div v-else-if="selectedSupervisor.users && selectedSupervisor.users.length > 0" class="space-y-4">
               <div v-for="user in selectedSupervisor.users" :key="user.id" class="bg-gray-50 rounded-lg p-4">
-                <div class="flex items-center space-x-4">
-                  <div class="flex-shrink-0">
-                    <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                      <span class="text-lg font-medium text-indigo-600">
-                        {{ user.firstname[0] }}{{ user.lastname[0] }}
-                      </span>
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0">
+                      <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                        <span class="text-lg font-medium text-indigo-600">
+                          {{ user.firstname[0] }}{{ user.lastname[0] }}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-gray-900">{{ user.firstname }} {{ user.lastname }}</p>
+                      <p class="text-sm text-gray-500">{{ user.email }}</p>
+                      <p class="text-sm text-gray-500">{{ user.designation }}</p>
                     </div>
                   </div>
-                  <div>
-                    <p class="text-sm font-medium text-gray-900">{{ user.firstname }} {{ user.lastname }}</p>
-                    <p class="text-sm text-gray-500">{{ user.email }}</p>
-                    <p class="text-sm text-gray-500">{{ user.designation }}</p>
-                  </div>
+                  <button
+                    @click="removeUserFromSupervisor(user)"
+                    class="text-red-600 hover:text-red-900"
+                    title="Remove User"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
@@ -695,6 +735,7 @@ const showUpdateHeadModal = ref(false)
 const showAssignSupervisorModal = ref(false)
 const showViewUsersModal = ref(false)
 const selectedSupervisor = ref(null)
+const availableUsersForSupervisor = ref([])
 const loadingUsers = ref(false)
 const showConfirmModal = ref(false)
 const confirmMessage = ref('')
@@ -719,6 +760,10 @@ const updateHeadForm = useForm({
   start_date: format(new Date(), 'yyyy-MM-dd'),
   is_acting: false,
   notes: null
+})
+
+const addUsersForm = useForm({
+  user_ids: []
 })
 
 const formatDate = (date) => {
@@ -875,11 +920,76 @@ const viewSupervisedUsers = async (supervisor) => {
       ...supervisor,
       users: response.data
     }
+    
+    // Filter available users (exclude already supervised users)
+    const supervisedUserIds = response.data.map(user => user.id)
+    availableUsersForSupervisor.value = props.availableUsers.filter(user => 
+      !supervisedUserIds.includes(user.id)
+    )
   } catch (error) {
     console.error('Error fetching supervised users:', error)
+    selectedSupervisor.value = {
+      ...supervisor,
+      users: []
+    }
+    availableUsersForSupervisor.value = props.availableUsers
   } finally {
     loadingUsers.value = false
   }
+}
+
+const addUsersToSupervisor = () => {
+  if (!addUsersForm.user_ids || addUsersForm.user_ids.length === 0) {
+    return
+  }
+
+  const userIds = addUsersForm.user_ids.map(option => {
+    return typeof option === 'object' ? option.value : option
+  }).filter(id => id !== null)
+
+  const formData = {
+    user_ids: userIds,
+    action: 'add'
+  }
+
+  router.put(route('admin.supervisors.users.update', selectedSupervisor.value.id), formData, {
+    onStart: () => {
+      addUsersForm.processing = true
+    },
+    onSuccess: () => {
+      addUsersForm.reset()
+      // Refresh the supervisor users list
+      viewSupervisedUsers(selectedSupervisor.value)
+    },
+    onError: (errors) => {
+      alert('Failed to add users: ' + (errors.user_ids || 'Please try again.'))
+    },
+    onFinish: () => {
+      addUsersForm.processing = false
+    }
+  })
+}
+
+const removeUserFromSupervisor = (user) => {
+  confirmDelete(
+    `Are you sure you want to remove ${user.firstname} ${user.lastname} from this supervisor?`,
+    () => {
+      const formData = {
+        user_ids: [user.id],
+        action: 'remove'
+      }
+
+      router.put(route('admin.supervisors.users.update', selectedSupervisor.value.id), formData, {
+        onSuccess: () => {
+          // Refresh the supervisor users list
+          viewSupervisedUsers(selectedSupervisor.value)
+        },
+        onError: (errors) => {
+          alert('Failed to remove user: ' + (errors.user_ids || 'Please try again.'))
+        }
+      })
+    }
+  )
 }
 
 const exportData = () => {

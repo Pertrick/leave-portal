@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\RedirectResponse;
 use App\Services\LeaveApplicationService;
+use App\Services\NotificationService;
 use App\Http\Requests\Leave\SaveDraftRequest;
 use App\Http\Requests\Leave\StoreLeaveRequest;
 use Inertia\RedirectResponse as InertiaRedirectResponse;
@@ -20,7 +21,8 @@ use Inertia\RedirectResponse as InertiaRedirectResponse;
 class LeaveController extends Controller
 {
     public function __construct(
-        private readonly LeaveApplicationService $leaveService
+        private readonly LeaveApplicationService $leaveService,
+        private readonly NotificationService $notificationService
     ) {}
 
     public function index(): Response
@@ -73,9 +75,11 @@ class LeaveController extends Controller
                 return back()->with('error', 'You have pending leave requests. Please wait for approval before submitting new requests.');
             }
 
-
             $validated = $request->validated();
             $leave = $this->leaveService->create($validated, $user);
+
+            // Send notification for leave submission
+            $this->notificationService->notifyLeaveSubmitted($leave);
 
             return redirect()->route('leaves.index')
                 ->with('success', 'Leave application submitted successfully.');

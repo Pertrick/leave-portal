@@ -3,6 +3,7 @@
 use App\Models\User;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SupervisorController;
@@ -13,12 +14,9 @@ use App\Http\Controllers\Admin\LeaveBalanceController;
 use App\Http\Controllers\Admin\LeaveApplicationController;
 use App\Http\Controllers\Admin\DepartmentRelationshipController;
 use App\Http\Controllers\Admin\StaffReportController;
+use App\Http\Controllers\NotificationController;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome');
-})->name('home');
-
-
+Route::get('/', [App\Http\Controllers\WelcomeController::class, 'index'])->name('home');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', function () {
@@ -30,13 +28,23 @@ Route::middleware(['auth'])->group(function () {
 
     // Profile Routes
     Route::get('/profile', function () {
+        $user = Auth::user();
+        
+        // Load relationships based on user role
+        $relationships = [
+            'department.activeHead.user',
+            'userLevel',
+            'leaveBalances.leaveType',
+            'roles'
+        ];
+        
+        // Only load supervisor relationships for non-admin users
+        if (!$user->hasRole('admin')) {
+            $relationships[] = 'activeSupervisors';
+        }
+        
         return Inertia::render('Profile/Index', [
-            'user' => auth()->user()->load([
-                'department.activeHead',
-                'userLevel',
-                'supervisor.supervisor',
-                'leaveBalances.leaveType'
-            ]),
+            'user' => $user->load($relationships),
         ]);
     })->name('profile');
 
@@ -65,6 +73,8 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/departments/{department}', [DepartmentController::class, 'update'])->name('departments.update');
         Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
         Route::put('/departments/{department}/toggle-status', [DepartmentController::class, 'toggleStatus'])->name('departments.toggle-status');
+        Route::get('/departments/{department}/users', [DepartmentController::class, 'showUsers'])->name('departments.users');
+        Route::get('/departments/{department}/users/export', [DepartmentController::class, 'exportUsers'])->name('departments.users.export');
 
         // Leave Entitlement Management
         Route::get('/leave-entitlements', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'index'])->name('leave-entitlements.index');
@@ -73,6 +83,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/leave-entitlements/{entitlement}', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'destroy'])->name('leave-entitlements.destroy');
         Route::put('/leave-entitlements/{entitlement}/toggle-status', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'toggleStatus'])->name('leave-entitlements.toggle-status');
         Route::post('/leave-entitlements/bulk-update', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'bulkUpdate'])->name('leave-entitlements.bulk-update');
+        Route::get('/leave-entitlements/user-level/{userLevel}/users', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'showUsersByLevel'])->name('leave-entitlements.users-by-level');
 
         // Dashboard
         Route::get('/dashboard', function () {
@@ -112,6 +123,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Staff Management Routes
     Route::prefix('staff')->name('staff.')->group(function () {
         Route::get('/', [StaffController::class, 'list'])->name('list');
+        Route::get('/export', [StaffController::class, 'export'])->name('export');
         Route::get('/account-requests', [StaffController::class, 'pendingLeaveAccounts'])->name('pending-leave-accounts');
         Route::get('/{user}', [StaffController::class, 'show'])->name('show');
         Route::get('/{user}/edit', [StaffController::class, 'edit'])->name('edit');
@@ -135,7 +147,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/staff-report/export', [StaffReportController::class, 'export'])->name('staff-report.export');
         });
 
-        
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications');
 });
 
 require __DIR__.'/settings.php';

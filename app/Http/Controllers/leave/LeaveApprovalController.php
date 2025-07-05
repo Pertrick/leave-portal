@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Leave;
 use App\Models\User;
 use App\Services\LeaveApplicationService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -15,7 +16,8 @@ use Inertia\Response;
 class LeaveApprovalController extends Controller
 {
     public function __construct(
-        protected LeaveApplicationService $leaveService
+        protected LeaveApplicationService $leaveService,
+        protected NotificationService $notificationService
     ) {
     }
 
@@ -111,6 +113,9 @@ class LeaveApprovalController extends Controller
     {
         $this->leaveService->approve($leave, Auth::user(), $request->input('comment'));
 
+        // Send notification for approval
+        $this->notificationService->notifyLeaveApproved($leave, Auth::user());
+
         return redirect()->route('leave.approvals.index')
             ->with('success', 'Leave application approved successfully.');
     }
@@ -123,6 +128,9 @@ class LeaveApprovalController extends Controller
         ]);
 
         $this->leaveService->reject($leave, Auth::user(), $validated['reason'], $validated['comment']);
+
+        // Send notification for rejection
+        $this->notificationService->notifyLeaveRejected($leave, Auth::user(), $validated['reason']);
 
         return redirect()->route('leave.approvals.index')
             ->with('success', 'Leave application rejected successfully.');

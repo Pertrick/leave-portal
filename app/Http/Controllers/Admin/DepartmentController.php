@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Models\User;
+use App\Models\UserLevel;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -11,6 +13,7 @@ class DepartmentController extends Controller
 {
     public function index(Request $request)
     {
+        
         $query = Department::query()
             ->when($request->input('search'), function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%")
@@ -67,5 +70,60 @@ class DepartmentController extends Controller
         $department->update(['status' => !$department->status]);
 
         return redirect()->back()->with('success', 'Department status updated successfully.');
+    }
+
+    public function showUsers(Department $department, Request $request)
+    {
+        $query = $department->users()
+            ->with(['userLevel', 'department'])
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('firstname', 'like', "%{$search}%")
+                      ->orWhere('lastname', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('staff_id', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->input('user_level_id'), function ($query, $userLevelId) {
+                $query->where('user_level_id', $userLevelId);
+            })
+            ->when($request->input('status') !== null, function ($query) use ($request) {
+                $query->where('is_active', $request->boolean('status'));
+            });
+
+        $users = $query->paginate(15)->withQueryString();
+
+        $userLevels = UserLevel::orderBy('level')->get();
+
+        return Inertia::render('Admin/Departments/Users', [
+            'department' => $department,
+            'users' => $users,
+            'userLevels' => $userLevels,
+            'filters' => $request->only(['search', 'user_level_id', 'status']),
+        ]);
+    }
+
+    public function exportUsers(Department $department, Request $request)
+    {
+        $query = $department->users()
+            ->with(['userLevel', 'department'])
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('firstname', 'like', "%{$search}%")
+                      ->orWhere('lastname', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('staff_id', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->input('user_level_id'), function ($query, $userLevelId) {
+                $query->where('user_level_id', $userLevelId);
+            })
+            ->when($request->input('status') !== null, function ($query) use ($request) {
+                $query->where('is_active', $request->boolean('status'));
+            });
+
+        $users = $query->get();
+
+        return \App\Exports\DepartmentUsersExport::download($users, $department);
     }
 } 

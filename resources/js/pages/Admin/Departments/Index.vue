@@ -30,8 +30,8 @@
                                     class="mt-1 block w-full"
                                 >
                                     <option value="">All Status</option>
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
+                                    <option value="1">Active</option>
+                                    <option value="0">Inactive</option>
                                 </SelectInput>
                             </div>
                         </div>
@@ -81,6 +81,12 @@
                                             </div>
                                         </td>
                                         <td class="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
+                                            <button
+                                                @click="viewUsers(department)"
+                                                class="text-blue-600 hover:text-blue-900 mr-3"
+                                            >
+                                                View Users
+                                            </button>
                                             <button
                                                 @click="openModal(department)"
                                                 class="text-indigo-600 hover:text-indigo-900 mr-3"
@@ -312,5 +318,9 @@ const toggleStatus = (department: Department) => {
     router.put(route('admin.departments.toggle-status', department.id), {
         preserveScroll: true
     });
+};
+
+const viewUsers = (department: Department) => {
+    router.visit(route('admin.departments.users', department.id));
 };
 </script> 

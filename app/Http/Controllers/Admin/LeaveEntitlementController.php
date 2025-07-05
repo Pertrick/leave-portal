@@ -132,4 +132,35 @@ class LeaveEntitlementController extends Controller
 
         return redirect()->back()->with('success', 'Leave entitlements updated successfully.');
     }
+
+    public function showUsersByLevel(UserLevel $userLevel, Request $request)
+    {
+        $query = $userLevel->users()
+            ->with(['department', 'userLevel'])
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('firstname', 'like', "%{$search}%")
+                      ->orWhere('lastname', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('staff_id', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->input('department_id'), function ($query, $departmentId) {
+                $query->where('department_id', $departmentId);
+            })
+            ->when($request->input('status') !== null, function ($query) use ($request) {
+                $query->where('is_active', $request->boolean('status'));
+            });
+
+        $users = $query->paginate(15)->withQueryString();
+
+        $departments = \App\Models\Department::orderBy('name')->get();
+
+        return Inertia::render('Admin/LeaveEntitlements/Users', [
+            'userLevel' => $userLevel,
+            'users' => $users,
+            'departments' => $departments,
+            'filters' => $request->only(['search', 'department_id', 'status']),
+        ]);
+    }
 } 

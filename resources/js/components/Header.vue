@@ -11,6 +11,7 @@ import {
     ChevronDownIcon
 } from '@heroicons/vue/24/outline';
 import UserAvatar from '@/components/UserAvatar.vue';
+import NotificationBell from '@/components/NotificationBell.vue';
 
 interface User {
     firstname: string;
@@ -56,6 +57,9 @@ defineExpose({});
                 <slot name="actions" />
             </div>
             <div class="flex items-center gap-4">
+                <!-- Notification Bell -->
+                <NotificationBell />
+                
                 <!-- User Profile Dropdown -->
                 <div class="relative" v-click-outside="closeUserMenu">
                     <button

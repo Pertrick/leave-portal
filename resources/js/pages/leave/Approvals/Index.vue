@@ -175,12 +175,13 @@
                     <tr v-for="leave in filteredLeaves" :key="leave.id" class="hover:bg-gray-50">
                       <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
-                          <div class="flex-shrink-0 h-10 w-10">
-                            <img class="h-10 w-10 rounded-full" :src="leave.user.profile_photo_url" :alt="leave.user.name">
-                          </div>
+                          <Avatar class="h-10 w-10">
+                            <AvatarImage :src="leave.user.profile_photo_url" :alt="`${leave.user.firstname} ${leave.user.lastname}`" />
+                            <AvatarFallback>{{ leave.user.firstname?.charAt(0) }}{{ leave.user.lastname?.charAt(0) }}</AvatarFallback>
+                          </Avatar>
                           <div class="ml-4">
                             <div class="text-sm font-medium text-gray-900">
-                              {{ leave.user.name }}
+                              {{ leave.user.firstname }} {{ leave.user.lastname }}
                             </div>
                             <div class="text-sm text-gray-500">
                               {{ leave.user.email }}
@@ -302,7 +303,10 @@
                     <tr v-for="leave in filteredHistory" :key="leave.id" class="hover:bg-gray-50">
                       <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
-                          <UserAvatar :user="leave.user" class="h-8 w-8" />
+                          <Avatar class="h-8 w-8">
+                            <AvatarImage :src="leave.user.profile_photo_url" :alt="`${leave.user.firstname} ${leave.user.lastname}`" />
+                            <AvatarFallback>{{ leave.user.firstname?.charAt(0) }}{{ leave.user.lastname?.charAt(0) }}</AvatarFallback>
+                          </Avatar>
                           <div class="ml-3">
                             <div class="text-sm font-medium text-gray-900">
                               {{ leave.user.firstname }} {{ leave.user.lastname }}
@@ -391,6 +395,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import Modal from '@/components/Modal.vue'
 import SecondaryButton from '@/components/SecondaryButton.vue'
 import DangerButton from '@/components/DangerButton.vue'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   ClockIcon,
   CheckCircleIcon,

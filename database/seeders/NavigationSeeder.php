@@ -161,15 +161,16 @@ class NavigationSeeder extends Seeder
             'is_dropdown' => false
         ]);
 
-        // Departments
-        // Navigation::create([
-        //     'path' => 'departments',
-        //     'title' => 'Departments',
-        //     'roles' => ['Admin', 'Supervisor', 'HOD', 'HR', 'Employee'],
-        //     'icon' => 'building',
-        //     'order' => 4,
-        //     'is_dropdown' => false
-        // ]);
+        //Departments
+        Navigation::create([
+            'path' => 'admin/departments',
+            'title' => 'Departments',
+            'roles' => ['admin', 'hr'],
+            'parent_id' => $staff->id,
+            'icon' => 'building',
+            'order' => 4,
+            'is_dropdown' => false
+        ]);
 
         // Reports
         $reports = Navigation::create([
@@ -224,7 +225,7 @@ class NavigationSeeder extends Seeder
 
         // New additions
         Navigation::create([
-            'path' => 'leave-entitlements',
+            'path' => 'admin/leave-entitlements',
             'title' => 'Leave Entitlements',
             'roles' => ['admin'],
             'icon' => 'calendar',

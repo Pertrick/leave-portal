@@ -1,24 +1,43 @@
 <template>
   <AppLayout title="Staff List">
     <template #header>
-      <div class="flex justify-between items-center">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-          Staff List
-        </h2>
-        <Link
-          v-if="can('manage-users')"
-          :href="route('register')"
-          class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700"
-        >
-          <PlusCircle class="w-4 h-4 mr-2" />
-          Add Staff
-        </Link>
-      </div>
+      <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        Staff List
+      </h2>
     </template>
 
     <div class="py-12">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
+          <!-- Header with Back, Export and Add Staff buttons -->
+          <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+              <div class="flex items-center space-x-3">
+                <Link
+                  :href="route('dashboard')"
+                  class="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700"
+                >
+                  <ArrowLeft class="w-4 h-4 mr-2" />
+                  Back
+                </Link>
+                <button
+                  @click="exportStaff"
+                  class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700"
+                >
+                  <Download class="w-4 h-4 mr-2" />
+                  Export
+                </button>
+                <Link
+                  v-if="can('manage-users')"
+                  :href="route('register')"
+                  class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700"
+                >
+                  <PlusCircle class="w-4 h-4 mr-2" />
+                  Add Staff
+                </Link>
+              </div>
+            </div>
+          </div>
           <!-- Filters -->
           <div class="p-6 border-b border-gray-200">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -56,8 +75,8 @@
                 <SearchSelect
                   v-model="filters.is_active"
                   :options="[
-                    { value: true, label: 'Active' },
-                    { value: false, label: 'Inactive' }
+                    { value: 1, label: 'Active' },
+                    { value: 0, label: 'Inactive' }
                   ]"
                   placeholder="All Status"
                   clearable
@@ -174,7 +193,7 @@ import { ref, computed, watch } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { SearchSelect } from '@/components/ui/select'
-import { PlusCircle } from 'lucide-vue-next'
+import { PlusCircle, Download, ArrowLeft } from 'lucide-vue-next'
 import Pagination from '@/components/Pagination.vue'
 import { usePermission } from '@/composables/usePermission'
 import UserAvatar from '@/components/UserAvatar.vue'
@@ -220,5 +239,16 @@ const toggleStatus = (staff) => {
       is_active: !staff.is_active
     })
   }
+}
+
+const exportStaff = () => {
+  const params = new URLSearchParams({
+    search: search.value,
+    department_id: filters.value.department_id || '',
+    user_level_id: filters.value.user_level_id || '',
+    is_active: filters.value.is_active !== null ? filters.value.is_active.toString() : ''
+  })
+  
+  window.open(route('staff.export') + '?' + params.toString(), '_blank')
 }
 </script> 

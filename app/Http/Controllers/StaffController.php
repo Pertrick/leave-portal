@@ -15,6 +15,8 @@ use Illuminate\Auth\Access\AuthorizationException;
 use App\Models\LeaveBalance;
 use App\Models\LeaveBalanceAuditLog;
 use App\Models\AccountRequest;
+use App\Exports\StaffExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class StaffController extends Controller
 {
@@ -192,6 +194,44 @@ class StaffController extends Controller
         });
 
         return redirect()->back()->with('success', 'Leave balances updated successfully.');
+    }
+
+    public function export()
+    {
+        $query = User::with(['department', 'userLevel', 'roles']);
+
+        // Search
+        if (request('search')) {
+            $search = request('search');
+            $query->where(function($q) use ($search) {
+                $q->where('firstname', 'like', "%{$search}%")
+                  ->orWhere('lastname', 'like', "%{$search}%")
+                  ->orWhere('staff_id', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        // Department filter
+        if (request('department_id')) {
+            $query->where('department_id', request('department_id'));
+        }
+
+        // User level filter
+        if (request('user_level_id')) {
+            $query->where('user_level_id', request('user_level_id'));
+        }
+
+        // Status filter
+        if (request()->has('is_active') && request('is_active') !== null) {
+            $query->where('is_active', request('is_active'));
+        }
+
+        $staff = $query->orderBy('firstname')->get();
+
+        return Excel::download(
+            new StaffExport($staff),
+            'staff-list-' . now()->format('Y-m-d-H-i-s') . '.xlsx'
+        );
     }
 
     public function pendingLeaveAccounts()

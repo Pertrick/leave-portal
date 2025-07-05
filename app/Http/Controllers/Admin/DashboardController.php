@@ -7,6 +7,7 @@ use App\Models\Leave;
 use App\Models\LeaveType;
 use App\Models\Department;
 use App\Models\LeaveBalance;
+use App\Models\User;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -71,11 +72,24 @@ class DashboardController extends Controller
                 ->where('is_cancelled', false)
                 ->count(),
             'onLeaveToday' => $staffOnLeave->count(),
-            'totalLeaveBalance' => LeaveBalance::where('year', $currentYear)
+            'totalRemainingDays' => LeaveBalance::where('year', $currentYear)
+                ->sum('days_remaining'),
+            'totalEntitledDays' => LeaveBalance::where('year', $currentYear)
                 ->sum('total_entitled_days'),
-            'exhaustedLeave' => LeaveBalance::where('year', $currentYear)
-                ->whereRaw('days_remaining <= 0')
-                ->count()
+            'totalDaysTaken' => LeaveBalance::where('year', $currentYear)
+                ->sum('days_taken'),
+            'exhaustedLeave' => User::whereHas('leaveBalances', function($query) use ($currentYear) {
+                $query->where('year', $currentYear)
+                      ->where('days_remaining', '<=', 0);
+            })->whereDoesntHave('leaveBalances', function($query) use ($currentYear) {
+                $query->where('year', $currentYear)
+                      ->where('days_remaining', '>', 0);
+            })->count(),
+            'lowLeaveBalance' => User::whereHas('leaveBalances', function($query) use ($currentYear) {
+                $query->where('year', $currentYear)
+                      ->where('days_remaining', '>', 0)
+                      ->where('days_remaining', '<=', 5);
+            })->count()
         ];
 
         // Get leave distribution by type
