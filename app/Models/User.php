@@ -217,17 +217,17 @@ class User extends Authenticatable
 
     public function activeSupervisors()
     {
-        return $this->supervisors()->where('is_active', true);
+        return $this->supervisors()->where('users.is_active', true);
     }
 
     public function primarySupervisor()
     {
-        return $this->activeSupervisors()->where('is_primary', true)->first();
+        return $this->activeSupervisors()->where('supervisors.is_primary', true)->first();
     }
 
     public function activeSupervisedUsers()
     {
-        return $this->supervisedUsers()->where('is_active', true);
+        return $this->supervisedUsers()->where('users.is_active', true);
     }
 
     public function departmentHead()
