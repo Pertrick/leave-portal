@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\LeaveApplicationController;
 use App\Http\Controllers\Admin\DepartmentRelationshipController;
 use App\Http\Controllers\Admin\StaffReportController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ContactSupportController;
 
 Route::get('/', [App\Http\Controllers\WelcomeController::class, 'index'])->name('home');
 
@@ -55,42 +56,52 @@ Route::middleware(['auth'])->group(function () {
 
     Route::middleware(['role:admin|hr'])->prefix('admin')->name('admin.')->group(function () {
         // Holidays
-        Route::resource('holidays', HolidayController::class);
-        Route::post('holidays/{holiday}/toggle', [HolidayController::class, 'toggleStatus'])->name('holidays.toggle');
+        Route::resource('holidays', HolidayController::class)->middleware('permission:manage_holidays');
+        Route::post('holidays/{holiday}/toggle', [HolidayController::class, 'toggleStatus'])->name('holidays.toggle')->middleware('permission:manage_holidays');
 
         // Leave Applications
-        Route::get('/leave-applications', [LeaveApplicationController::class, 'index'])->name('leave-applications.index');
-        Route::get('/leave-applications/{leave}', [LeaveApplicationController::class, 'show'])->name('leave-applications.show');
-        Route::get('/leave-applications/export', [LeaveApplicationController::class, 'export'])->name('leave-applications.export');
+        Route::get('/leave-applications', [LeaveApplicationController::class, 'index'])->name('leave-applications.index')->middleware('permission:view_leaves');
+        Route::get('/leave-applications/{leave}', [LeaveApplicationController::class, 'show'])->name('leave-applications.show')->middleware('permission:view_leaves');
+        Route::get('/leave-applications/export', [LeaveApplicationController::class, 'export'])->name('leave-applications.export')->middleware('permission:export_reports');
 
         // Leave Reports
-        Route::get('/leave/report', [App\Http\Controllers\Admin\LeaveReportController::class, 'index'])->name('leave.report');
-        Route::get('/leave/export', [App\Http\Controllers\Admin\LeaveReportController::class, 'export'])->name('leave.export');
+        Route::get('/leave/report', [App\Http\Controllers\Admin\LeaveReportController::class, 'index'])->name('leave.report')->middleware('permission:view_reports');
+        Route::get('/leave/export', [App\Http\Controllers\Admin\LeaveReportController::class, 'export'])->name('leave.export')->middleware('permission:export_reports');
 
         // Department Management
-        Route::get('/departments', [DepartmentController::class, 'index'])->name('departments.index');
-        Route::post('/departments', [DepartmentController::class, 'store'])->name('departments.store');
-        Route::put('/departments/{department}', [DepartmentController::class, 'update'])->name('departments.update');
-        Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
-        Route::put('/departments/{department}/toggle-status', [DepartmentController::class, 'toggleStatus'])->name('departments.toggle-status');
-        Route::get('/departments/{department}/users', [DepartmentController::class, 'showUsers'])->name('departments.users');
-        Route::get('/departments/{department}/users/export', [DepartmentController::class, 'exportUsers'])->name('departments.users.export');
+        Route::get('/departments', [DepartmentController::class, 'index'])->name('departments.index')->middleware('permission:view_departments');
+        Route::post('/departments', [DepartmentController::class, 'store'])->name('departments.store')->middleware('permission:create_departments');
+        Route::put('/departments/{department}', [DepartmentController::class, 'update'])->name('departments.update')->middleware('permission:edit_departments');
+        Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy')->middleware('permission:delete_departments');
+        Route::put('/departments/{department}/toggle-status', [DepartmentController::class, 'toggleStatus'])->name('departments.toggle-status')->middleware('permission:edit_departments');
+        Route::get('/departments/{department}/users', [DepartmentController::class, 'showUsers'])->name('departments.users')->middleware('permission:view_users');
+        Route::get('/departments/{department}/users/export', [DepartmentController::class, 'exportUsers'])->name('departments.users.export')->middleware('permission:export_reports');
 
         // Leave Entitlement Management
-        Route::get('/leave-entitlements', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'index'])->name('leave-entitlements.index');
-        Route::post('/leave-entitlements', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'store'])->name('leave-entitlements.store');
-        Route::put('/leave-entitlements/{entitlement}', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'update'])->name('leave-entitlements.update');
-        Route::delete('/leave-entitlements/{entitlement}', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'destroy'])->name('leave-entitlements.destroy');
-        Route::put('/leave-entitlements/{entitlement}/toggle-status', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'toggleStatus'])->name('leave-entitlements.toggle-status');
-        Route::post('/leave-entitlements/bulk-update', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'bulkUpdate'])->name('leave-entitlements.bulk-update');
-        Route::get('/leave-entitlements/user-level/{userLevel}/users', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'showUsersByLevel'])->name('leave-entitlements.users-by-level');
+        Route::get('/leave-entitlements', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'index'])->name('leave-entitlements.index')->middleware('permission:manage_leave_entitlements');
+        Route::post('/leave-entitlements', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'store'])->name('leave-entitlements.store')->middleware('permission:manage_leave_entitlements');
+        Route::put('/leave-entitlements/{entitlement}', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'update'])->name('leave-entitlements.update')->middleware('permission:manage_leave_entitlements');
+        Route::delete('/leave-entitlements/{entitlement}', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'destroy'])->name('leave-entitlements.destroy')->middleware('permission:manage_leave_entitlements');
+        Route::put('/leave-entitlements/{entitlement}/toggle-status', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'toggleStatus'])->name('leave-entitlements.toggle-status')->middleware('permission:manage_leave_entitlements');
+        Route::post('/leave-entitlements/bulk-update', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'bulkUpdate'])->name('leave-entitlements.bulk-update')->middleware('permission:manage_leave_entitlements');
+        Route::get('/leave-entitlements/user-level/{userLevel}/users', [App\Http\Controllers\Admin\LeaveEntitlementController::class, 'showUsersByLevel'])->name('leave-entitlements.users-by-level')->middleware('permission:view_users');
+
+        // Roles and Permissions Management
+        Route::resource('roles', App\Http\Controllers\Admin\RoleController::class)->middleware('permission:manage_roles');
+        Route::resource('permissions', App\Http\Controllers\Admin\PermissionController::class)->middleware('permission:manage_permissions');
+        Route::resource('user-roles', App\Http\Controllers\Admin\UserRoleController::class)->only(['index', 'show'])->middleware('permission:manage_user_roles');
+        Route::put('/user-roles/{user}/roles', [App\Http\Controllers\Admin\UserRoleController::class, 'updateRoles'])->name('user-roles.update-roles')->middleware('permission:manage_user_roles');
+        Route::put('/user-roles/{user}/permissions', [App\Http\Controllers\Admin\UserRoleController::class, 'updatePermissions'])->name('user-roles.update-permissions')->middleware('permission:manage_user_permissions');
+        Route::post('/user-roles/{user}/assign-role', [App\Http\Controllers\Admin\UserRoleController::class, 'assignRole'])->name('user-roles.assign-role')->middleware('permission:manage_user_roles');
+        Route::delete('/user-roles/{user}/remove-role', [App\Http\Controllers\Admin\UserRoleController::class, 'removeRole'])->name('user-roles.remove-role')->middleware('permission:manage_user_roles');
+        Route::post('/user-roles/{user}/assign-permission', [App\Http\Controllers\Admin\UserRoleController::class, 'assignPermission'])->name('user-roles.assign-permission')->middleware('permission:manage_user_permissions');
+        Route::delete('/user-roles/{user}/remove-permission', [App\Http\Controllers\Admin\UserRoleController::class, 'removePermission'])->name('user-roles.remove-permission')->middleware('permission:manage_user_permissions');
 
         // Dashboard
         Route::get('/dashboard', function () {
             return Inertia::render('Admin/Dashboard');
         })->middleware(['role_redirect'])->name('dashboard');
         Route::get('/api/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index']);
-
     });
 });
 
@@ -148,6 +159,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications');
+});
+
+// Contact Support Routes
+Route::prefix('contact-support')->name('contact-support.')->group(function () {
+    Route::get('/', [ContactSupportController::class, 'index'])->name('index');
+    Route::get('/create', [ContactSupportController::class, 'create'])->name('create');
+    Route::post('/', [ContactSupportController::class, 'store'])->name('store');
+    Route::get('/{contactSupport}', [ContactSupportController::class, 'show'])->name('show');
+    Route::post('/{contactSupport}/respond', [ContactSupportController::class, 'respond'])->name('respond')->middleware('permission:manage_support_requests');
+    Route::patch('/{contactSupport}/status', [ContactSupportController::class, 'updateStatus'])->name('update-status')->middleware('permission:manage_support_requests');
 });
 
 require __DIR__.'/settings.php';

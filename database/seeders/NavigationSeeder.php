@@ -234,5 +234,55 @@ class NavigationSeeder extends Seeder
             'is_dropdown' => false,
         ]);
 
+        // Roles and Permissions Management
+        $security = Navigation::create([
+            'path' => 'admin/security',
+            'title' => 'Security Management',
+            'roles' => ['admin'],
+            'icon' => 'shield-check',
+            'order' => 8,
+            'is_dropdown' => true
+        ]);
+
+        Navigation::create([
+            'path' => 'admin/roles',
+            'title' => 'Roles',
+            'parent_id' => $security->id,
+            'roles' => ['admin'],
+            'icon' => 'shield-check',
+            'order' => 1,
+            'is_dropdown' => false
+        ]);
+
+        Navigation::create([
+            'path' => 'admin/permissions',
+            'title' => 'Permissions',
+            'parent_id' => $security->id,
+            'roles' => ['admin'],
+            'icon' => 'key',
+            'order' => 2,
+            'is_dropdown' => false
+        ]);
+
+        Navigation::create([
+            'path' => 'admin/user-roles',
+            'title' => 'User Roles',
+            'parent_id' => $security->id,
+            'roles' => ['admin'],
+            'icon' => 'users',
+            'order' => 3,
+            'is_dropdown' => false
+        ]);
+
+        // Contact Support
+        Navigation::create([
+            'path' => 'contact-support',
+            'title' => 'Contact Support',
+            'icon' => 'chat-bubble-left-right',
+            'roles' => ['employee', 'supervisor', 'hod', 'hr', 'admin'],
+            'order' => 8,
+            'is_dropdown' => false
+        ]);
+
     }
 } 

@@ -14,6 +14,7 @@ import 'vue-toastification/dist/index.css';
 import { vClickOutside } from './directives/click-outside';
 import VCalendar from 'v-calendar';
 import 'v-calendar/style.css';
+import { permission, role } from './directives/permission';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -48,6 +49,8 @@ createInertiaApp({
                 componentPrefix: 'vc'
             })
             .directive('click-outside', vClickOutside)
+            .directive('permission', permission)
+            .directive('role', role)
             .mount(el);
 
         // Initialize ToastService after app is mounted

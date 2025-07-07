@@ -33,7 +33,7 @@ class NewAccountRequest extends Notification implements ShouldQueue
             ->when($this->accountRequest->notes, function (MailMessage $message) {
                 return $message->line("Additional Notes: {$this->accountRequest->notes}");
             })
-            ->action('View Request', route('pending-leave-accounts', $this->accountRequest))
+            ->action('View Request', route('staff.pending-leave-accounts', $this->accountRequest))
             ->line('Please review and process this request at your earliest convenience.');
     }
 } 
