@@ -44,6 +44,7 @@ class ContactSupportController extends Controller
             'message' => 'required|string|max:2000',
             'category' => 'required|in:' . implode(',', array_keys(ContactSupport::CATEGORIES)),
             'priority' => 'required|in:' . implode(',', array_keys(ContactSupport::PRIORITIES)),
+            'attachments.*' => 'nullable|file|max:10240|mimes:pdf,doc,docx,jpg,jpeg,png,gif,txt,zip,rar', // 10MB max
         ]);
 
         $supportRequest = ContactSupport::create([
@@ -54,6 +55,23 @@ class ContactSupportController extends Controller
             'priority' => $validated['priority'],
             'status' => 'open',
         ]);
+
+        // Handle file uploads
+        if ($request->hasFile('attachments')) {
+            $attachments = [];
+            foreach ($request->file('attachments') as $file) {
+                $path = $file->store('support-attachments', 'public');
+                $attachments[] = [
+                    'filename' => $file->hashName(),
+                    'original_name' => $file->getClientOriginalName(),
+                    'file_path' => $path,
+                    'file_size' => $file->getSize(),
+                    'mime_type' => $file->getMimeType(),
+                    'uploaded_at' => now()->toISOString(),
+                ];
+            }
+            $supportRequest->update(['attachments' => $attachments]);
+        }
 
         // Notify admins about new support request
         $admins = User::role(['admin', 'hr'])->get();
@@ -72,7 +90,7 @@ class ContactSupportController extends Controller
             abort(403);
         }
 
-        $contactSupport->load(['responder']);
+        $contactSupport->load(['user', 'responder']);
 
         return Inertia::render('ContactSupport/Show', [
             'request' => $contactSupport,
@@ -156,5 +174,30 @@ class ContactSupportController extends Controller
 
         return redirect()->route('contact-support.index')
             ->with('success', 'Support request deleted successfully.');
+    }
+
+    public function downloadAttachment(ContactSupport $contactSupport, $filename)
+    {
+        $user = auth()->user();
+        
+        // Check if user can download this attachment
+        if ($contactSupport->user_id !== $user->id && !$user->hasAnyRole(['admin', 'hr'])) {
+            abort(403);
+        }
+
+        // Find the attachment
+        $attachment = collect($contactSupport->attachments)->firstWhere('filename', $filename);
+        
+        if (!$attachment) {
+            abort(404);
+        }
+
+        $filePath = storage_path('app/public/' . $attachment['file_path']);
+        
+        if (!file_exists($filePath)) {
+            abort(404);
+        }
+
+        return response()->download($filePath, $attachment['original_name']);
     }
 } 

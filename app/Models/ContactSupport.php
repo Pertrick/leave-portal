@@ -28,6 +28,15 @@ class ContactSupport extends Model
         'responded_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'category_label',
+        'priority_label', 
+        'status_label',
+        'category_color',
+        'priority_color',
+        'status_color',
+    ];
+
     // Categories for different types of requests
     const CATEGORIES = [
         'technical' => 'Technical Issue',
@@ -80,10 +89,24 @@ class ContactSupport extends Model
         return self::STATUSES[$this->status] ?? 'Unknown';
     }
 
+    public function getCategoryColorAttribute(): string
+    {
+        return match($this->category) {
+            'technical' => 'bg-red-800 text-white',
+            'leave_system' => 'bg-indigo-100 text-indigo-800',
+            'account' => 'bg-blue-100 text-blue-800',
+            'policy' => 'bg-green-100 text-green-800',
+            'complaint' => 'bg-red-100 text-red-800',
+            'suggestion' => 'bg-yellow-100 text-yellow-800',
+            'other' => 'bg-gray-100 text-gray-800',
+            default => 'bg-gray-100 text-gray-800',
+        };
+    }
+
     public function getPriorityColorAttribute(): string
     {
         return match($this->priority) {
-            'low' => 'bg-gray-100 text-gray-800',
+            'low' => 'bg-gray-400 text-gray-800',
             'medium' => 'bg-blue-100 text-blue-800',
             'high' => 'bg-orange-100 text-orange-800',
             'urgent' => 'bg-red-100 text-red-800',

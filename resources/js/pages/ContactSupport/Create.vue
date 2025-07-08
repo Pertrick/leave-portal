@@ -90,6 +90,45 @@
                     </div>
                   </div>
 
+                  <!-- File Attachments -->
+                  <div class="space-y-2">
+                    <Label class="text-sm font-semibold text-gray-700">
+                      Attachments (Optional)
+                    </Label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                      <input
+                        type="file"
+                        multiple
+                        @change="handleFileUpload"
+                        class="hidden"
+                        ref="fileInput"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt,.zip,.rar"
+                      />
+                      <div @click="$refs.fileInput.click()" class="cursor-pointer">
+                        <Upload class="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p class="text-gray-600 font-medium">Click to upload files or drag and drop</p>
+                        <p class="text-sm text-gray-500 mt-1">PDF, DOC, Images, TXT, ZIP (max 10MB each)</p>
+                      </div>
+                    </div>
+                    
+                    <!-- File preview list -->
+                    <div v-if="selectedFiles.length > 0" class="mt-4 space-y-2">
+                      <div v-for="(file, index) in selectedFiles" :key="index" 
+                           class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                        <div class="flex items-center gap-3">
+                          <FileIcon class="w-5 h-5 text-blue-500" />
+                          <div>
+                            <span class="text-sm font-medium">{{ file.name }}</span>
+                            <span class="text-xs text-gray-500 ml-2">({{ formatFileSize(file.size) }})</span>
+                          </div>
+                        </div>
+                        <button @click="removeFile(index)" class="text-red-500 hover:text-red-700 p-1">
+                          <X class="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
                   <!-- Submit Buttons -->
                   <div class="flex items-center gap-4 pt-4">
                     <Button 
@@ -210,6 +249,7 @@
 
 <script setup>
 import { useForm } from '@inertiajs/vue3'
+import { ref } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -217,7 +257,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import SelectInput from '@/components/SelectInput.vue'
-import { LoaderCircle, HelpCircle, Clock } from 'lucide-vue-next'
+import { LoaderCircle, HelpCircle, Clock, Upload, FileIcon, X } from 'lucide-vue-next'
 
 const props = defineProps({
   categories: Object,
@@ -228,13 +268,47 @@ const form = useForm({
   subject: '',
   message: '',
   category: '',
-  priority: ''
+  priority: '',
+  attachments: []
 })
+
+const selectedFiles = ref([])
+
+const handleFileUpload = (event) => {
+  const files = Array.from(event.target.files)
+  
+  // Validate file sizes (10MB max each)
+  const maxSize = 10 * 1024 * 1024 // 10MB
+  const validFiles = files.filter(file => {
+    if (file.size > maxSize) {
+      alert(`File "${file.name}" is too large. Maximum size is 10MB.`)
+      return false
+    }
+    return true
+  })
+  
+  selectedFiles.value = [...selectedFiles.value, ...validFiles]
+  form.attachments = selectedFiles.value
+}
+
+const removeFile = (index) => {
+  selectedFiles.value.splice(index, 1)
+  form.attachments = selectedFiles.value
+}
+
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
 
 const submit = () => {
   form.post(route('contact-support.store'), {
     onSuccess: () => {
       form.reset()
+      selectedFiles.value = []
     }
   })
 }

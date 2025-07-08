@@ -174,15 +174,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
     // Contact Support Routes
-    Route::prefix('contact-support')->name('contact-support.')->group(function () {
-        Route::get('/', [ContactSupportController::class, 'index'])->name('index');
-        Route::get('/create', [ContactSupportController::class, 'create'])->name('create');
-        Route::post('/', [ContactSupportController::class, 'store'])->name('store');
-        Route::get('/{contactSupport}', [ContactSupportController::class, 'show'])->name('show');
-        Route::get('/{contactSupport}/edit', [ContactSupportController::class, 'edit'])->name('edit');
-        Route::put('/{contactSupport}', [ContactSupportController::class, 'update'])->name('update');
-        Route::delete('/{contactSupport}', [ContactSupportController::class, 'destroy'])->name('destroy');
-    });
+Route::prefix('contact-support')->name('contact-support.')->group(function () {
+    Route::get('/', [ContactSupportController::class, 'index'])->name('index');
+    Route::get('/create', [ContactSupportController::class, 'create'])->name('create');
+    Route::post('/', [ContactSupportController::class, 'store'])->name('store');
+    Route::get('/{contactSupport}', [ContactSupportController::class, 'show'])->name('show');
+    Route::get('/{contactSupport}/edit', [ContactSupportController::class, 'edit'])->name('edit');
+    Route::put('/{contactSupport}', [ContactSupportController::class, 'update'])->name('update');
+    Route::delete('/{contactSupport}', [ContactSupportController::class, 'destroy'])->name('destroy');
+    Route::get('/{contactSupport}/download/{filename}', [ContactSupportController::class, 'downloadAttachment'])->name('download-attachment');
+});
 });
 
 
