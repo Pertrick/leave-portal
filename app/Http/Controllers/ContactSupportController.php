@@ -16,17 +16,10 @@ class ContactSupportController extends Controller
     {
         $user = auth()->user();
         
-        $query = ContactSupport::with(['user', 'responder'])
-            ->when($user->hasAnyRole(['admin', 'hr']), function ($query) {
-                // Admin/HR can see all requests
-                return $query;
-            }, function ($query) use ($user) {
-                // Regular users can only see their own requests
-                return $query->where('user_id', $user->id);
-            })
-            ->orderBy('created_at', 'desc');
-
-        $requests = $query->paginate(15);
+        $requests = ContactSupport::with(['responder'])
+            ->where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
 
         return Inertia::render('ContactSupport/Index', [
             'requests' => $requests,
@@ -75,11 +68,11 @@ class ContactSupportController extends Controller
         $user = auth()->user();
         
         // Check if user can view this request
-        if (!$user->hasAnyRole(['admin', 'hr']) && $contactSupport->user_id !== $user->id) {
+        if ($contactSupport->user_id !== $user->id) {
             abort(403);
         }
 
-        $contactSupport->load(['user', 'responder']);
+        $contactSupport->load(['responder']);
 
         return Inertia::render('ContactSupport/Show', [
             'request' => $contactSupport,
@@ -89,44 +82,79 @@ class ContactSupportController extends Controller
         ]);
     }
 
-    public function respond(Request $request, ContactSupport $contactSupport)
+    public function edit(ContactSupport $contactSupport)
     {
-        $this->authorize('manage_support_requests');
+        $user = auth()->user();
+        
+        // Check if user can edit this request
+        if ($contactSupport->user_id !== $user->id) {
+            abort(403);
+        }
 
-        $validated = $request->validate([
-            'admin_response' => 'required|string|max:2000',
-            'status' => 'required|in:' . implode(',', array_keys(ContactSupport::STATUSES)),
+        // Only allow editing if request is still open
+        if ($contactSupport->status !== 'open') {
+            return redirect()->route('contact-support.show', $contactSupport)
+                ->with('error', 'Cannot edit a closed or in-progress request.');
+        }
+
+        return Inertia::render('ContactSupport/Edit', [
+            'request' => $contactSupport,
+            'categories' => ContactSupport::CATEGORIES,
+            'priorities' => ContactSupport::PRIORITIES,
         ]);
-
-        $contactSupport->update([
-            'admin_response' => $validated['admin_response'],
-            'status' => $validated['status'],
-            'responded_by' => auth()->id(),
-            'responded_at' => now(),
-        ]);
-
-        // Notify user about the response
-        $contactSupport->user->notify(new SupportRequestUpdated($contactSupport));
-
-        return redirect()->back()
-            ->with('success', 'Response sent successfully.');
     }
 
-    public function updateStatus(Request $request, ContactSupport $contactSupport)
+    public function update(Request $request, ContactSupport $contactSupport)
     {
-        $this->authorize('manage_support_requests');
+        $user = auth()->user();
+        
+        // Check if user can update this request
+        if ($contactSupport->user_id !== $user->id) {
+            abort(403);
+        }
+
+        // Only allow updates if request is still open
+        if ($contactSupport->status !== 'open') {
+            return redirect()->back()
+                ->with('error', 'Cannot update a closed or in-progress request.');
+        }
 
         $validated = $request->validate([
-            'status' => 'required|in:' . implode(',', array_keys(ContactSupport::STATUSES)),
+            'subject' => 'required|string|max:255',
+            'message' => 'required|string|max:2000',
+            'category' => 'required|in:' . implode(',', array_keys(ContactSupport::CATEGORIES)),
+            'priority' => 'required|in:' . implode(',', array_keys(ContactSupport::PRIORITIES)),
         ]);
 
         $contactSupport->update([
-            'status' => $validated['status'],
-            'responded_by' => auth()->id(),
-            'responded_at' => now(),
+            'subject' => $validated['subject'],
+            'message' => $validated['message'],
+            'category' => $validated['category'],
+            'priority' => $validated['priority'],
         ]);
 
         return redirect()->back()
-            ->with('success', 'Status updated successfully.');
+            ->with('success', 'Support request updated successfully.');
+    }
+
+    public function destroy(ContactSupport $contactSupport)
+    {
+        $user = auth()->user();
+        
+        // Check if user can delete this request
+        if ($contactSupport->user_id !== $user->id) {
+            abort(403);
+        }
+
+        // Only allow deletion if request is still open
+        if ($contactSupport->status !== 'open') {
+            return redirect()->back()
+                ->with('error', 'Cannot delete a closed or in-progress request.');
+        }
+
+        $contactSupport->delete();
+
+        return redirect()->route('contact-support.index')
+            ->with('success', 'Support request deleted successfully.');
     }
 } 

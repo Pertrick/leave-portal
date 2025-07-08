@@ -51,45 +51,7 @@
           </CardContent>
         </Card>
 
-        <!-- Admin Response Section -->
-        <Card v-if="canRespond" class="mb-6">
-          <CardHeader>
-            <CardTitle>Respond to Request</CardTitle>
-            <CardDescription>
-              Provide a response and update the status
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form @submit.prevent="submitResponse" class="space-y-4">
-              <div>
-                <Label for="status">Status</Label>
-                <Select v-model="responseForm.status" required>
-                  <option v-for="(label, value) in statuses" :key="value" :value="value">
-                    {{ label }}
-                  </option>
-                </Select>
-              </div>
 
-              <div>
-                <Label for="admin_response">Response</Label>
-                <Textarea
-                  id="admin_response"
-                  v-model="responseForm.admin_response"
-                  placeholder="Provide a detailed response to the user..."
-                  rows="4"
-                  required
-                />
-              </div>
-
-              <div class="flex items-center gap-4">
-                <Button type="submit" :disabled="responseForm.processing">
-                  <LoaderCircle v-if="responseForm.processing" class="w-4 h-4 animate-spin mr-2" />
-                  Send Response
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
 
         <!-- Response History -->
         <Card v-if="request.admin_response">
@@ -106,39 +68,18 @@
           </CardContent>
         </Card>
 
-        <!-- Quick Status Update -->
-        <Card v-if="canRespond && !request.admin_response" class="mt-6">
-          <CardHeader>
-            <CardTitle>Quick Status Update</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div class="flex items-center gap-4">
-              <Select v-model="quickStatus" @change="updateStatus">
-                <option value="">Update Status</option>
-                <option v-for="(label, value) in statuses" :key="value" :value="value">
-                  {{ label }}
-                </option>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+
       </div>
     </div>
   </AppLayout>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useForm } from '@inertiajs/vue3'
-import { usePermission } from '@/composables/usePermission'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select } from '@/components/ui/select'
-import { LoaderCircle } from 'lucide-vue-next'
 
 const props = defineProps({
   request: Object,
@@ -147,32 +88,7 @@ const props = defineProps({
   statuses: Object
 })
 
-const { can } = usePermission()
-const canRespond = can('manage_support_requests')
 
-const quickStatus = ref('')
-
-const responseForm = useForm({
-  admin_response: '',
-  status: 'in_progress'
-})
-
-const submitResponse = () => {
-  responseForm.post(route('contact-support.respond', props.request.id), {
-    onSuccess: () => {
-      responseForm.reset()
-    }
-  })
-}
-
-const updateStatus = () => {
-  if (quickStatus.value) {
-    useForm().patch(route('contact-support.update-status', props.request.id), {
-      status: quickStatus.value
-    })
-    quickStatus.value = ''
-  }
-}
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('en-US', {

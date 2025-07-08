@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\DepartmentRelationshipController;
 use App\Http\Controllers\Admin\StaffReportController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ContactSupportController;
+use App\Http\Controllers\Admin\ContactSupportController as AdminContactSupportController;
 
 Route::get('/', [App\Http\Controllers\WelcomeController::class, 'index'])->name('home');
 
@@ -25,12 +26,12 @@ Route::middleware(['auth'])->group(function () {
     })->middleware(['role_redirect'])->name('dashboard');
 
     // Dashboard API
-     Route::get('/api/dashboard', [App\Http\Controllers\DashboardController::class, 'index']);
+    Route::get('/api/dashboard', [App\Http\Controllers\DashboardController::class, 'index']);
 
     // Profile Routes
     Route::get('/profile', function () {
         $user = Auth::user();
-        
+
         // Load relationships based on user role
         $relationships = [
             'department.activeHead.user',
@@ -38,12 +39,12 @@ Route::middleware(['auth'])->group(function () {
             'leaveBalances.leaveType',
             'roles'
         ];
-        
+
         // Only load supervisor relationships for non-admin users
         if (!$user->hasRole('admin')) {
             $relationships[] = 'activeSupervisors';
         }
-        
+
         return Inertia::render('Profile/Index', [
             'user' => $user->load($relationships),
         ]);
@@ -97,6 +98,17 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/user-roles/{user}/assign-permission', [App\Http\Controllers\Admin\UserRoleController::class, 'assignPermission'])->name('user-roles.assign-permission')->middleware('permission:manage_user_permissions');
         Route::delete('/user-roles/{user}/remove-permission', [App\Http\Controllers\Admin\UserRoleController::class, 'removePermission'])->name('user-roles.remove-permission')->middleware('permission:manage_user_permissions');
 
+        // Contact Support Management
+        Route::get('/contact-support', [AdminContactSupportController::class, 'index'])->name('contact-support.index')->middleware('permission:manage_support_requests');
+        Route::get('/contact-support/{contactSupport}', [AdminContactSupportController::class, 'show'])->name('contact-support.show')->middleware('permission:manage_support_requests');
+        Route::post('/contact-support/{contactSupport}/respond', [AdminContactSupportController::class, 'respond'])->name('contact-support.respond')->middleware('permission:manage_support_requests');
+        Route::patch('/contact-support/{contactSupport}/status', [AdminContactSupportController::class, 'updateStatus'])->name('contact-support.update-status')->middleware('permission:manage_support_requests');
+        Route::patch('/contact-support/{contactSupport}/priority', [AdminContactSupportController::class, 'updatePriority'])->name('contact-support.update-priority')->middleware('permission:manage_support_requests');
+        Route::post('/contact-support/{contactSupport}/assign', [AdminContactSupportController::class, 'assign'])->name('contact-support.assign')->middleware('permission:manage_support_requests');
+        Route::delete('/contact-support/{contactSupport}/close', [AdminContactSupportController::class, 'close'])->name('contact-support.close')->middleware('permission:manage_support_requests');
+        Route::patch('/contact-support/{contactSupport}/reopen', [AdminContactSupportController::class, 'reopen'])->name('contact-support.reopen')->middleware('permission:manage_support_requests');
+        Route::delete('/contact-support/{contactSupport}', [AdminContactSupportController::class, 'destroy'])->name('contact-support.destroy')->middleware('permission:manage_support_requests');
+
         // Dashboard
         Route::get('/dashboard', function () {
             return Inertia::render('Admin/Dashboard');
@@ -149,28 +161,32 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('staff.leave-balances.update');
 
 
-        Route::middleware(['role:admin|hr|supervisor'])->group(function () {
-            Route::get('/leave/balances', [LeaveBalanceController::class, 'index'])->name('leave.balances.index');
-            Route::get('/leave/balances/export', [LeaveBalanceController::class, 'export'])->name('leave.balances.export');
+    Route::middleware(['role:admin|hr|supervisor'])->group(function () {
+        Route::get('/leave/balances', [LeaveBalanceController::class, 'index'])->name('leave.balances.index');
+        Route::get('/leave/balances/export', [LeaveBalanceController::class, 'export'])->name('leave.balances.export');
 
-              // Staff Report Routes
+        // Staff Report Routes
         Route::get('/staff-report', [StaffReportController::class, 'index'])->name('staff-report.index');
         Route::get('/staff-report/export', [StaffReportController::class, 'export'])->name('staff-report.export');
-        });
+    });
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications');
+
+
+    // Contact Support Routes
+    Route::prefix('contact-support')->name('contact-support.')->group(function () {
+        Route::get('/', [ContactSupportController::class, 'index'])->name('index');
+        Route::get('/create', [ContactSupportController::class, 'create'])->name('create');
+        Route::post('/', [ContactSupportController::class, 'store'])->name('store');
+        Route::get('/{contactSupport}', [ContactSupportController::class, 'show'])->name('show');
+        Route::get('/{contactSupport}/edit', [ContactSupportController::class, 'edit'])->name('edit');
+        Route::put('/{contactSupport}', [ContactSupportController::class, 'update'])->name('update');
+        Route::delete('/{contactSupport}', [ContactSupportController::class, 'destroy'])->name('destroy');
+    });
 });
 
-// Contact Support Routes
-Route::prefix('contact-support')->name('contact-support.')->group(function () {
-    Route::get('/', [ContactSupportController::class, 'index'])->name('index');
-    Route::get('/create', [ContactSupportController::class, 'create'])->name('create');
-    Route::post('/', [ContactSupportController::class, 'store'])->name('store');
-    Route::get('/{contactSupport}', [ContactSupportController::class, 'show'])->name('show');
-    Route::post('/{contactSupport}/respond', [ContactSupportController::class, 'respond'])->name('respond')->middleware('permission:manage_support_requests');
-    Route::patch('/{contactSupport}/status', [ContactSupportController::class, 'updateStatus'])->name('update-status')->middleware('permission:manage_support_requests');
-});
 
-require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';
-require __DIR__.'/leave.php';
+
+require __DIR__ . '/settings.php';
+require __DIR__ . '/auth.php';
+require __DIR__ . '/leave.php';

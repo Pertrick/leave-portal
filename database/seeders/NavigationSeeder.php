@@ -274,13 +274,23 @@ class NavigationSeeder extends Seeder
             'is_dropdown' => false
         ]);
 
-        // Contact Support
+        // Contact Support - User Routes
         Navigation::create([
             'path' => 'contact-support',
             'title' => 'Contact Support',
             'icon' => 'chat-bubble-left-right',
-            'roles' => ['employee', 'supervisor', 'hod', 'hr', 'admin'],
+            'roles' => ['employee', 'supervisor', 'hod'],
             'order' => 8,
+            'is_dropdown' => false
+        ]);
+
+        // Contact Support - Admin Routes
+        Navigation::create([
+            'path' => 'admin/contact-support',
+            'title' => 'Support Management',
+            'icon' => 'chat-bubble-left-right',
+            'roles' => ['admin', 'hr'],
+            'order' => 9,
             'is_dropdown' => false
         ]);
 

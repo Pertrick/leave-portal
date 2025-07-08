@@ -1,17 +1,19 @@
 <template>
   <AppLayout title="Contact Support">
-    <template #header>
-      <div class="flex items-center justify-between">
-        <h2 class="text-xl font-semibold text-gray-800">Contact Support</h2>
-        <Button @click="$inertia.visit(route('contact-support.create'))" class="flex items-center gap-2">
-          <PlusIcon class="w-4 h-4" />
-          New Request
-        </Button>
-      </div>
-    </template>
-
     <div class="py-6">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <!-- Page Header with Action Button -->
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900">My Support Requests</h2>
+            <p class="text-gray-600 mt-1">View and manage your support requests</p>
+          </div>
+          <Button @click="$inertia.visit(route('contact-support.create'))" class="flex items-center gap-2">
+            <PlusIcon class="w-4 h-4" />
+            New Request
+          </Button>
+        </div>
+
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <Card>
@@ -74,7 +76,7 @@
         <!-- Requests Table -->
         <Card>
           <CardHeader>
-            <CardTitle>Support Requests</CardTitle>
+            <CardTitle>My Support Requests</CardTitle>
             <CardDescription>View and manage your support requests</CardDescription>
           </CardHeader>
           <CardContent>
@@ -100,17 +102,17 @@
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
-                        {{ request.category_label }}
+                        {{ categories[request.category] }}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge :class="request.priority_color">
-                        {{ request.priority_label }}
+                      <Badge :class="getPriorityClass(request.priority)">
+                        {{ priorities[request.priority] }}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge :class="request.status_color">
-                        {{ request.status_label }}
+                      <Badge :class="getStatusClass(request.status)">
+                        {{ statuses[request.status] }}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -124,6 +126,23 @@
                           @click="$inertia.visit(route('contact-support.show', request.id))"
                         >
                           <EyeIcon class="w-4 h-4" />
+                        </Button>
+                        <Button
+                          v-if="request.status === 'open'"
+                          variant="outline"
+                          size="sm"
+                          @click="$inertia.visit(route('contact-support.edit', request.id))"
+                        >
+                          <PencilIcon class="w-4 h-4" />
+                        </Button>
+                        <Button
+                          v-if="request.status === 'open'"
+                          variant="outline"
+                          size="sm"
+                          @click="deleteRequest(request.id)"
+                          class="text-red-600 hover:text-red-700"
+                        >
+                          <TrashIcon class="w-4 h-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -165,6 +184,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -173,6 +193,8 @@ import { Badge } from '@/components/ui/badge'
 import {
   PlusIcon,
   EyeIcon,
+  PencilIcon,
+  TrashIcon,
   ChatBubbleLeftRightIcon,
   ClockIcon,
   ArrowPathIcon,
@@ -207,5 +229,31 @@ const formatDate = (date) => {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+const getPriorityClass = (priority) => {
+  const classes = {
+    low: 'bg-green-100 text-green-800',
+    medium: 'bg-yellow-100 text-yellow-800',
+    high: 'bg-orange-100 text-orange-800',
+    urgent: 'bg-red-100 text-red-800',
+  }
+  return classes[priority] || 'bg-gray-100 text-gray-800'
+}
+
+const getStatusClass = (status) => {
+  const classes = {
+    open: 'bg-blue-100 text-blue-800',
+    in_progress: 'bg-yellow-100 text-yellow-800',
+    resolved: 'bg-green-100 text-green-800',
+    closed: 'bg-gray-100 text-gray-800',
+  }
+  return classes[status] || 'bg-gray-100 text-gray-800'
+}
+
+const deleteRequest = (id) => {
+  if (confirm('Are you sure you want to delete this request?')) {
+    router.delete(route('contact-support.destroy', id))
+  }
 }
 </script> 

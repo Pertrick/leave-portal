@@ -32,7 +32,7 @@ class NewSupportRequest extends Notification implements ShouldQueue
             ->line('Category: ' . $this->supportRequest->category_label)
             ->line('Priority: ' . $this->supportRequest->priority_label)
             ->line('Message: ' . substr($this->supportRequest->message, 0, 100) . '...')
-            ->action('View Request', route('contact-support.show', $this->supportRequest->id))
+            ->action('View Request', route('admin.contact-support.show', $this->supportRequest->id))
             ->line('Please respond to this request as soon as possible.');
     }
 
