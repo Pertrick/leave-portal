@@ -19,10 +19,20 @@ class DashboardController extends Controller
         try {
             $user = Auth::user();
             
+            // Debug information
+            Log::info('Dashboard Debug', [
+                'user_id' => $user->id,
+                'user_name' => $user->full_name,
+                'department_id' => $user->department_id,
+                'user_level_id' => $user->user_level_id ?? 'null'
+            ]);
+            
             // Get leave balances with leave type
             $leaveBalances = LeaveBalance::where('user_id', $user->id)
                 ->with('leaveType')
                 ->get();
+            
+            Log::info('Leave Balances found', ['count' => $leaveBalances->count()]);
             
             $totalAvailableDays = $leaveBalances->sum('days_remaining');
             
@@ -41,7 +51,7 @@ class DashboardController extends Controller
             $leaveDistribution = LeaveBalance::where('user_id', $user->id)
                 ->with(['leaveType' => function($query) use ($user) {
                     $query->with(['leaveEntitlements' => function($query) use ($user) {
-                        $query->where('user_level_id', $user->user_level_id)
+                        $query->where('user_level_id', $user->user_level_id ?? 0)
                             ->where('is_active', true);
                             
                     }]);
@@ -125,13 +135,37 @@ class DashboardController extends Controller
                 ->latest()
                 ->take(5)
                 ->get()
-                ->map(function ($request) {
+                ->map(function ($request) use ($user) {
                     return [
                         'id' => $request->id,
                         'type' => $request->leaveType->name,
                         'days' => $request->working_days,
                         'start_date' => $request->start_date,
+                        'end_date' => $request->end_date,
                         'status' => $request->status,
+                        'user_name' => $user->full_name,
+                        'user_id' => $user->id,
+                    ];
+                });
+
+            // Get all team members' approved leaves for calendar
+            $teamLeaves = Leave::where('status', 'approved')
+                ->whereHas('user', function ($query) use ($user) {
+                    $query->where('department_id', $user->department_id);
+                })
+                ->with(['user', 'leaveType'])
+                ->get()
+                ->map(function ($leave) use ($user) {
+                    return [
+                        'id' => $leave->id,
+                        'type' => $leave->leaveType->name,
+                        'days' => $leave->working_days,
+                        'start_date' => $leave->start_date,
+                        'end_date' => $leave->end_date,
+                        'status' => $leave->status,
+                        'user_name' => $leave->user->full_name,
+                        'user_id' => $leave->user->id,
+                        'is_own_leave' => $leave->user_id === $user->id,
                     ];
                 });
             
@@ -186,17 +220,29 @@ class DashboardController extends Controller
                 $currentDate->addDay();
             }
             
-            return response()->json([
+            $response = [
                 'totalAvailableDays' => $totalAvailableDays,
                 'pendingRequests' => $pendingRequests,
                 'upcomingLeaves' => $upcomingLeaves,
                 'teamMembers' => $teamMembers,
                 'recentRequests' => $recentRequests,
+                'teamLeaves' => $teamLeaves,
                 'calendarDays' => $calendarDays,
                 'leaveDistribution' => $leaveDistribution,
                 'leaveTypeAnalysis' => $leaveTypeAnalysis,
                 'statusOverview' => $statusOverview,
+            ];
+            
+            Log::info('Dashboard Response', [
+                'totalAvailableDays' => $totalAvailableDays,
+                'pendingRequests' => $pendingRequests,
+                'upcomingLeaves' => $upcomingLeaves,
+                'teamMembers_count' => count($teamMembers),
+                'recentRequests_count' => count($recentRequests),
+                'teamLeaves_count' => count($teamLeaves),
             ]);
+            
+            return response()->json($response);
         } catch (\Exception $e) {
             Log::error('Dashboard Error: ' . $e->getMessage(), [
                 'file' => $e->getFile(),
@@ -210,6 +256,7 @@ class DashboardController extends Controller
                 'upcomingLeaves' => 0,
                 'teamMembers' => [],
                 'recentRequests' => [],
+                'teamLeaves' => [],
                 'calendarDays' => [],
                 'leaveDistribution' => [],
                 'leaveTypeAnalysis' => [],

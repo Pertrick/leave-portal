@@ -3,14 +3,21 @@
     <template #header>
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-semibold text-gray-800">Support Request Details</h2>
-        <Button @click="$inertia.visit(route('contact-support.index'))" variant="outline">
-          Back to Requests
-        </Button>
       </div>
     </template>
 
     <div class="py-6">
       <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
+        <!-- Back Button -->
+        <div class="mb-6 flex justify-end">
+          <Button @click="$inertia.visit(route('contact-support.index'))" variant="outline" class="bg-black text-white hover:bg-gray-800">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Back to Requests
+          </Button>
+        </div>
+
         <!-- Request Details -->
         <Card class="mb-6">
           <CardHeader>

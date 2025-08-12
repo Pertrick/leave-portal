@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { type NavigationItem } from '@/types';
 import Sidebar from '@/components/Sidebar.vue';
 import Header from '@/components/Header.vue';
@@ -10,6 +10,12 @@ import BackButton from '@/components/BackButton.vue';
 const props = defineProps<{
     title?: string;
 }>();
+
+const isSidebarCollapsed = ref(false);
+
+const handleSidebarToggle = (collapsed: boolean) => {
+    isSidebarCollapsed.value = collapsed;
+};
 
 const navigation = computed<NavigationItem[]>(() => {
     const page = usePage();
@@ -51,11 +57,9 @@ const page = usePage();
     <div class="min-h-screen bg-background">
         <Alert />
         <div class="flex h-screen overflow-hidden">
-            <div class="w-64 flex-shrink-0">
-                <Sidebar :navigation="navigation" class="h-screen" />
-            </div>
+            <Sidebar :navigation="navigation" class="h-screen" @sidebar-toggle="handleSidebarToggle" />
             
-            <div class="flex-1 flex flex-col h-screen overflow-hidden">
+            <div class="flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300">
                 <Header :breadcrumbs="breadcrumbs" :title="currentTitle">
                     <template #actions>
                         <slot name="header-actions" />
@@ -63,7 +67,7 @@ const page = usePage();
                 </Header>
                 <main class="flex-1 overflow-y-auto">
                     <div class="p-4">
-                        <BackButton v-if="($page.url.includes('/show') || $page.url.includes('/details')) && !$page.url.startsWith('/dashboard') && !$page.url.startsWith('/')" />
+                        <BackButton v-if="(page.url.includes('/show') || page.url.includes('/details')) && !page.url.startsWith('/dashboard') && !page.url.startsWith('/')" />
                     </div>
                     <slot />
                 </main>

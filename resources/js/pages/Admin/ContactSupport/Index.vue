@@ -1,5 +1,5 @@
 <template>
-  <AdminLayout>
+  <AppLayout>
     <template #header>
       <h2 class="font-semibold text-xl text-gray-800 leading-tight">
         Support Requests Management
@@ -216,14 +216,14 @@
         </div>
       </div>
     </div>
-  </AdminLayout>
+  </AppLayout>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
-import AdminLayout from '@/Layouts/AdminLayout.vue'
-import Pagination from '@/Components/Pagination.vue'
+import AppLayout from '@/layouts/AppLayout.vue';
+import Pagination from '@/components/Pagination.vue'
 
 const props = defineProps({
   requests: Object,

@@ -28,18 +28,51 @@ class DepartmentRelationshipController extends Controller
             // Get all departments for the dropdown
             $departments = Department::orderBy('name')->get();
 
-            $departmentHead = $department->activeHead()->first();
+            $departmentHead = $department->activeHead()->with('user')->first();
 
-            // Get active supervisors with their supervised users
-            $supervisors = $department->supervisors()
-                ->with(['supervisor', 'user'])
-                ->where('is_active', true)
+            // Get unique active supervisors for this department
+            $supervisors = \App\Models\Supervisor::select([
+                    'supervisors.id',
+                    'supervisors.supervisor_id',
+                    'supervisors.start_date',
+                    'supervisors.is_primary',
+                    'users.firstname',
+                    'users.lastname',
+                    'users.email',
+                    'users.designation'
+                ])
+                ->join('users', 'supervisors.supervisor_id', '=', 'users.id')
+                ->where('supervisors.department_id', $department->id)
+                ->where('supervisors.is_active', true)
+                ->where('users.is_active', true)
+                ->whereIn('supervisors.id', function ($query) use ($department) {
+                    $query->select(DB::raw('MIN(id)'))
+                        ->from('supervisors')
+                        ->where('department_id', $department->id)
+                        ->where('is_active', true)
+                        ->groupBy('supervisor_id');
+                })
                 ->get()
                 ->map(function ($supervisor) {
-                    $supervisor->supervised_users_count = Supervisor::where('supervisor_id', $supervisor->supervisor_id)
+                    // Count supervised users for this supervisor
+                    $supervisedCount = \App\Models\Supervisor::where('supervisor_id', $supervisor->supervisor_id)
                         ->where('is_active', true)
                         ->count();
-                    return $supervisor;
+                    
+                    return [
+                        'id' => $supervisor->id,
+                        'supervisor_id' => $supervisor->supervisor_id,
+                        'supervisor' => [
+                            'id' => $supervisor->supervisor_id,
+                            'firstname' => $supervisor->firstname,
+                            'lastname' => $supervisor->lastname,
+                            'email' => $supervisor->email,
+                            'designation' => $supervisor->designation,
+                        ],
+                        'start_date' => $supervisor->start_date,
+                        'is_primary' => $supervisor->is_primary,
+                        'supervised_users_count' => $supervisedCount,
+                    ];
                 });
 
             // Get all active users in the department
@@ -205,8 +238,18 @@ class DepartmentRelationshipController extends Controller
             }
 
             foreach ($validated['user_ids'] as $userId) {
-                // Deactivate existing primary supervisor if new one is primary
-                if ($validated['is_primary']) {
+                // Check if user already has a primary supervisor
+                $hasPrimarySupervisor = Supervisor::where('user_id', $userId)
+                    ->where('is_primary', true)
+                    ->where('is_active', true)
+                    ->exists();
+
+                // Determine if this new supervisor should be primary
+                $isPrimary = $validated['is_primary'] ?? false;
+                
+                // If user already has a primary supervisor and we're trying to make this one primary,
+                // deactivate the existing primary supervisor
+                if ($isPrimary && $hasPrimarySupervisor) {
                     Supervisor::where('user_id', $userId)
                         ->where('is_primary', true)
                         ->where('is_active', true)
@@ -215,12 +258,18 @@ class DepartmentRelationshipController extends Controller
                             'end_date' => now(),
                         ]);
                 }
+                
+                // If user doesn't have a primary supervisor and this isn't explicitly marked as secondary,
+                // make this one primary
+                if (!$hasPrimarySupervisor && !isset($validated['is_primary'])) {
+                    $isPrimary = true;
+                }
 
                 Supervisor::create([
                     'user_id' => $userId,
                     'supervisor_id' => $validated['supervisor_id'],
                     'department_id' => $department->id,
-                    'is_primary' => $validated['is_primary'] ?? false,
+                    'is_primary' => $isPrimary,
                     'is_active' => true,
                     'start_date' => $validated['start_date'],
                 ]);
@@ -292,10 +341,10 @@ class DepartmentRelationshipController extends Controller
             }
 
             // If new head is regular, deactivate both regular and acting heads
-            $previousHeads = $department->activeHeads()->with('user')->get();
+            $previousHeads = $department->activeHead()->with('user')->get();
 
             // Update end_date for all current heads
-            $department->activeHeads()->update(['end_date' => now()]);
+            $department->activeHead()->update(['end_date' => now()]);
     
             // Remove roles from previous heads
             $previousHeads->each(function ($head) {
@@ -345,6 +394,106 @@ class DepartmentRelationshipController extends Controller
             Log::error($e->getMessage());
             DB::rollBack();
             return redirect()->back()->with('error', 'Error updating department head: ' . $e->getMessage());
+        }
+    }
+
+    public function updateSupervisorUsers(Request $request, Supervisor $supervisor)
+    {
+        try {
+            $validated = $request->validate([
+                'user_ids' => 'required|array',
+                'user_ids.*' => 'exists:users,id',
+                'action' => 'required|in:add,remove'
+            ]);
+
+            DB::beginTransaction();
+
+            if ($validated['action'] === 'add') {
+                // Add new users to supervisor
+                foreach ($validated['user_ids'] as $userId) {
+                    // Check if relationship already exists
+                    $existingSupervisor = Supervisor::where('user_id', $userId)
+                        ->where('supervisor_id', $supervisor->supervisor_id)
+                        ->where('is_active', true)
+                        ->first();
+
+                    if (!$existingSupervisor) {
+                        // Check if user already has a primary supervisor
+                        $hasPrimarySupervisor = Supervisor::where('user_id', $userId)
+                            ->where('is_primary', true)
+                            ->where('is_active', true)
+                            ->exists();
+
+                        // If user doesn't have a primary supervisor, make this one primary
+                        // Otherwise, make it secondary
+                        $isPrimary = !$hasPrimarySupervisor;
+
+                        Supervisor::create([
+                            'user_id' => $userId,
+                            'supervisor_id' => $supervisor->supervisor_id,
+                            'department_id' => $supervisor->department_id,
+                            'is_primary' => $isPrimary,
+                            'is_active' => true,
+                            'start_date' => now(),
+                        ]);
+                    }
+                }
+            } elseif ($validated['action'] === 'remove') {
+                // Remove users from supervisor
+                Supervisor::where('supervisor_id', $supervisor->supervisor_id)
+                    ->whereIn('user_id', $validated['user_ids'])
+                    ->where('is_active', true)
+                    ->update([
+                        'is_active' => false,
+                        'end_date' => now(),
+                    ]);
+            }
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Supervisor users updated successfully');
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            throw $e;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Error updating supervisor users: ' . $e->getMessage());
+        }
+    }
+
+    public function getSupervisedUsers($supervisorUserId)
+    {
+        try {
+            // Get all users who are supervised by this supervisor
+            $supervisedUsers = User::whereIn('id', function ($query) use ($supervisorUserId) {
+                $query->select('user_id')
+                    ->from('supervisors')
+                    ->where('supervisor_id', $supervisorUserId)
+                    ->where('is_active', true);
+            })
+            ->select('id', 'firstname', 'lastname', 'email', 'designation')
+            ->get();
+
+            // Also get the supervisor relationship details for each user
+            $supervisedUsersWithDetails = $supervisedUsers->map(function ($user) use ($supervisorUserId) {
+                $supervisorRelationship = \App\Models\Supervisor::where('user_id', $user->id)
+                    ->where('supervisor_id', $supervisorUserId)
+                    ->where('is_active', true)
+                    ->first();
+                
+                return [
+                    'id' => $user->id,
+                    'firstname' => $user->firstname,
+                    'lastname' => $user->lastname,
+                    'email' => $user->email,
+                    'designation' => $user->designation,
+                    'is_primary' => $supervisorRelationship ? $supervisorRelationship->is_primary : false,
+                    'start_date' => $supervisorRelationship ? $supervisorRelationship->start_date : null,
+                ];
+            });
+
+            return response()->json($supervisedUsersWithDetails);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error fetching supervised users: ' . $e->getMessage()], 500);
         }
     }
 }

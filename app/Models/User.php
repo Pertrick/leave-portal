@@ -188,20 +188,6 @@ class User extends Authenticatable
     }
 
     // Get the supervisor(s) for this user, filtered by department
-    public function supervisors()
-    {
-        return $this->belongsToMany(
-            User::class,
-            'supervisors',
-            'user_id',
-            'supervisor_id'
-        )
-        ->wherePivot('department_id', $this->department_id)
-        ->withPivot('department_id')
-        ->select('users.*');
-    }
-
-    // Get the users this user supervises, filtered by department
     public function supervisedUsers()
     {
         return $this->belongsToMany(
@@ -209,12 +195,19 @@ class User extends Authenticatable
             'supervisors',
             'supervisor_id',
             'user_id'
-        )
-        ->wherePivot('department_id', $this->department_id)
-        ->withPivot('department_id')
-        ->select('users.*');
+        )->withPivot(['department_id', 'is_active', 'is_primary']);
     }
-
+    
+    public function supervisors()
+    {
+        return $this->belongsToMany(
+            User::class,
+            'supervisors',
+            'user_id',
+            'supervisor_id'
+        )->withPivot(['department_id', 'is_active', 'is_primary']);
+    }
+    
     public function activeSupervisors()
     {
         return $this->supervisors()->where('users.is_active', true);
@@ -232,19 +225,19 @@ class User extends Authenticatable
 
     public function departmentHead()
     {
-        return $this->department->activeHeads();
+        return $this->department->activeHead();
     }
 
     public function isDepartmentHead(): bool
     {
-        return $this->department->activeHeads()
+        return $this->department->activeHead()
             ->where('user_id', $this->id)
             ->exists();
     }
 
     public function isActingDepartmentHead(): bool
     {
-        return $this->department->activeHeads()
+        return $this->department->activeHead()
             ->where('user_id', $this->id)
             ->where('is_acting', true)
             ->exists();
@@ -257,6 +250,6 @@ class User extends Authenticatable
 
     public function currentDepartmentHead()
     {
-        return $this->department->activeHeads()->first();
+        return $this->department->activeHead;
     }
 }

@@ -78,7 +78,7 @@
                 </div>
             </div>
 
-              <div v-if="departmentHead" class="space-y-4">
+              <div v-if="departmentHead && departmentHead.user" class="space-y-4">
                 <div class="flex items-start space-x-4">
                   <div class="flex-shrink-0">
                     <div class="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
@@ -91,6 +91,7 @@
                     <div class="flex items-center justify-between">
                       <div>
                         <p class="text-sm font-medium text-gray-900">
+                          {{ departmentHead.user.firstname }} {{ departmentHead.user.lastname }}
                           <span v-if="departmentHead.is_acting" class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                             Acting
                           </span>
@@ -915,7 +916,8 @@ const viewSupervisedUsers = async (supervisor) => {
   loadingUsers.value = true
 
   try {
-    const response = await axios.get(`/api/supervisors/${supervisor.id}/users`)
+    const response = await axios.get(`/api/supervisors/${supervisor.supervisor_id}/users`)
+    // Keep the original supervisor object with its ID (relationship ID) and add users
     selectedSupervisor.value = {
       ...supervisor,
       users: response.data

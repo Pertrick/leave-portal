@@ -1,23 +1,28 @@
 <template>
-  <AdminLayout>
+  <AppLayout>
     <template #header>
       <div class="flex justify-between items-center">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
           Support Request #{{ request.id }}
         </h2>
-        <div class="flex space-x-2">
-          <Link
-            :href="route('admin.contact-support.index')"
-            class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
-          >
-            Back to List
-          </Link>
-        </div>
       </div>
     </template>
 
     <div class="py-12">
-      <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
+      <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
+        <!-- Back Button -->
+        <div class="mb-6 flex justify-end">
+          <Link
+            :href="route('admin.contact-support.index')"
+            class="inline-flex items-center px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
+          >
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Back to List
+          </Link>
+        </div>
+
         <!-- Request Details -->
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
           <div class="p-6">
@@ -215,13 +220,13 @@
         </div>
       </div>
     </div>
-  </AdminLayout>
+  </AppLayout>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
-import AdminLayout from '@/Layouts/AdminLayout.vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 
 const props = defineProps({
   request: Object,

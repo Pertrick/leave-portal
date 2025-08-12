@@ -173,7 +173,7 @@
 
 <script setup>
 import { Link } from '@inertiajs/vue3'
-import AppLayout from '@/Layouts/AppLayout.vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 import { ArrowLeftIcon, DocumentIcon } from '@heroicons/vue/24/outline'
 
 const props = defineProps({

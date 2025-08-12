@@ -17,6 +17,9 @@ use App\Services\NotificationService;
 use App\Http\Requests\Leave\SaveDraftRequest;
 use App\Http\Requests\Leave\StoreLeaveRequest;
 use Inertia\RedirectResponse as InertiaRedirectResponse;
+use App\Models\LeaveBalanceAuditLog;
+use App\Models\LeaveType;
+
 
 class LeaveController extends Controller
 {
@@ -25,14 +28,35 @@ class LeaveController extends Controller
         private readonly NotificationService $notificationService
     ) {}
 
-    public function index(): Response
+    public function index()
     {
-        $leaves = $this->leaveService->getUserLeaves(Auth::guard('web')->user());
-        $leaveTypes = $this->leaveService->getLeaveTypes();
+        $user = auth()->user();
+        
+        // Get regular leave applications
+        $leaves = Leave::where('user_id', $user->id)
+            ->with(['leaveType', 'approvals.approver'])
+            ->latest()
+            ->get();
+
+        // Get manual adjustments from audit logs
+        $manualAdjustments = LeaveBalanceAuditLog::whereHas('leaveBalance', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->with(['leaveBalance.leaveType', 'adjustedBy'])
+            ->latest()
+            ->get()
+            ->map(function ($auditLog) {
+                return $auditLog->toLeaveHistoryFormat();
+            });
+
+        // Combine and sort by date
+        $allLeaveHistory = $leaves->concat($manualAdjustments)
+            ->sortByDesc('created_at')
+            ->values();
 
         return Inertia::render('leave/Index', [
-            'leaves' => $leaves,
-            'leaveTypes' => $leaveTypes,
+            'leaves' => $allLeaveHistory,
+            'leaveTypes' => LeaveType::all(),
         ]);
     }
 
@@ -162,6 +186,8 @@ class LeaveController extends Controller
 
             $this->leaveService->update($leave, $request->validated());
 
+            $this->notificationService->notifyLeaveSubmitted($leave);
+
             return redirect()->route('leaves.index')
                 ->with('success', 'Leave application updated successfully.');
         }
@@ -220,6 +246,8 @@ class LeaveController extends Controller
         return redirect()->route('leaves.index')
             ->with('success', 'Leave application cancelled successfully.');
     }
+
+
 
     /**
      * Calculate leave duration based on dates and leave type

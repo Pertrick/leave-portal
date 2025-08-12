@@ -13,6 +13,10 @@ defineProps({
     companyName: {
         type: String,
         default: 'Leave Portal'
+    },
+    logoUrl : {
+        type : String,
+        default : false
     }
 });
 </script>
@@ -29,7 +33,7 @@ defineProps({
         <header class="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
             <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <img src="/images/euromega-logo.png" alt="Logo" class="h-10 w-40">
+                    <img :src="logoUrl" alt="Logo" class="h-10 w-40">
                 </div>
                 
                 <nav class="flex items-center space-x-6">

@@ -141,6 +141,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('admin.departments.supervisors.assign');
     Route::delete('/admin/supervisors/{supervisor}', [DepartmentRelationshipController::class, 'deactivateSupervisor'])
         ->name('admin.supervisors.deactivate');
+    Route::put('/admin/supervisors/{supervisor}/users', [DepartmentRelationshipController::class, 'updateSupervisorUsers'])
+        ->name('admin.supervisors.users.update');
+    Route::get('/api/supervisors/{supervisor}/users', [DepartmentRelationshipController::class, 'getSupervisedUsers'])
+        ->name('api.supervisors.users');
     Route::put('/admin/departments/{department}/head', [DepartmentRelationshipController::class, 'updateHead'])->name('admin.departments.head.update');
 
     // Staff Management Routes

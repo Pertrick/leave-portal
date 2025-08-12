@@ -11,7 +11,8 @@ class WelcomeController extends Controller
     {
         return Inertia::render('Welcome', [
             'showRegBtn' => env('SHOW_REG_BTN', false),
-            'companyName' => env('COMPANY', 'Leave Portal')
+            'companyName' => env('COMPANY', 'Leave Portal'),
+            'logoUrl' => asset('images/euromega-logo.png')
         ]);
     }
 } 

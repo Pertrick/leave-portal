@@ -121,7 +121,7 @@
                       <p class="text-sm font-medium text-gray-900">{{ log.adjusted_by.firstname }} {{ log.adjusted_by.lastname }} {{ log.adjusted_by.email }}</p>
                       <p class="text-sm text-gray-500">{{ log.reason }}</p>
                     </div>
-                    <p class="text-sm text-gray-500">{{ formatDate(log.created_at) }}</p>
+                    <p class="text-sm text-gray-500">{{ log.created_at }}</p>
                   </div>
                   <div class="mt-2 text-sm text-gray-500">
                     <p class="font-medium text-gray-900">{{ log.leave_balance.leave_type.name }}</p>
@@ -165,8 +165,9 @@ const props = defineProps({
   staff: Object,
   auditLogs: Array,
 })
+ 
+const { parseLocalDate } = useDateFormat()
 
-const { formatDate } = useDateFormat()
 // const toast = useToast()
 
 const showConfirmModal = ref(false)

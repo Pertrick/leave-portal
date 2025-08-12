@@ -241,13 +241,13 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
-import AppLayout from '@/Layouts/AppLayout.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import TextInput from '@/Components/TextInput.vue';
-import SelectInput from '@/Components/SelectInput.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
-import Pagination from '@/Components/Pagination.vue';
-import UserAvatar from '@/Components/UserAvatar.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
+import InputLabel from '@/components/InputLabel.vue';
+import TextInput from '@/components/TextInput.vue';
+import SelectInput from '@/components/SelectInput.vue';
+import SecondaryButton from '@/components/SecondaryButton.vue';
+import Pagination from '@/components/Pagination.vue';
+import UserAvatar from '@/components/UserAvatar.vue';
 
 interface User {
     id: number;

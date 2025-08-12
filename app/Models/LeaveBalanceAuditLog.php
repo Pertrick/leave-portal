@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -28,5 +29,34 @@ class LeaveBalanceAuditLog extends Model
     public function adjustedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'adjusted_by_id');
+    }
+
+    /**
+     * Convert audit log to leave history format
+     */
+    public function toLeaveHistoryFormat(): array
+    {
+        $difference = $this->new_balance - $this->previous_balance;
+        $isDeduction = $difference < 0;
+        
+        return [
+            'id' => 'audit_' . $this->id,
+            'type' => 'manual_adjustment',
+            'title' => $isDeduction ? 'Manual Leave Deduction' : 'Manual Leave Addition',
+            'leave_type' => $this->leaveBalance->leaveType->name,
+            'days' => abs($difference),
+            'status' => 'completed',
+            'reason' => $this->reason,
+            'adjusted_by' => $this->adjustedBy->firstname . ' ' . $this->adjustedBy->lastname,
+            'created_at' => $this->created_at,
+            'is_deduction' => $isDeduction,
+            'previous_balance' => $this->previous_balance,
+            'new_balance' => $this->new_balance,
+        ];
+    }
+
+    public function getCreatedAtAttribute($value)
+    {
+        return Carbon::parse($value)->format('d-m-Y');
     }
 } 

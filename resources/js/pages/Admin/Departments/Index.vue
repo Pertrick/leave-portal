@@ -137,7 +137,7 @@
 
                         <div>
                             <InputLabel for="description" value="Description" />
-                            <Textarea
+                            <TextArea
                                 id="description"
                                 v-model="form.description"
                                 class="mt-1 block w-full"
@@ -197,18 +197,18 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/Layouts/AppLayout.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import TextInput from '@/Components/TextInput.vue';
-import Textarea from '@/Components/Textarea.vue';
-import SelectInput from '@/Components/SelectInput.vue';
-import Checkbox from '@/Components/Checkbox.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
-import Modal from '@/Components/Modal.vue';
-import Pagination from '@/Components/Pagination.vue';
-import InputError from '@/Components/InputError.vue';
-import ConfirmationModal from '@/Components/ConfirmationModal.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
+import InputLabel from '@/components/InputLabel.vue';
+import TextInput from '@/components/TextInput.vue'; 
+import TextArea from '@/components/ui/textarea/Textarea.vue';
+import SelectInput from '@/components/SelectInput.vue';
+import Checkbox from '@/components/Checkbox.vue';
+import PrimaryButton from '@/components/PrimaryButton.vue';
+import SecondaryButton from '@/components/SecondaryButton.vue';
+import Modal from '@/components/Modal.vue';
+import Pagination from '@/components/Pagination.vue';
+import InputError from '@/components/InputError.vue';
+import ConfirmationModal from '@/components/ConfirmationModal.vue';
 
 interface Department {
     id: number;

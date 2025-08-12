@@ -3,17 +3,18 @@
 namespace App\Exports;
 
 use App\Models\User;
-use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\WithColumnWidths;
-use Maatwebsite\Excel\Concerns\WithTitle;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use Illuminate\Support\Collection;
 use PhpOffice\PhpSpreadsheet\Style\Font;
+use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithColumnWidths;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class StaffExport implements FromArray, WithHeadings, WithStyles, WithColumnWidths, WithTitle, WithMapping
+class StaffExport implements FromCollection, WithHeadings, WithStyles, WithColumnWidths, WithTitle, WithMapping
 {
     protected $data;
 
@@ -22,21 +23,9 @@ class StaffExport implements FromArray, WithHeadings, WithStyles, WithColumnWidt
         $this->data = $data;
     }
 
-    public function array(): array
+    public function collection(): Collection
     {
-        return $this->data->map(function ($staff) {
-            return [
-                $staff->staff_id,
-                $staff->firstname . ' ' . $staff->lastname,
-                $staff->email,
-                $staff->department?->name ?? 'N/A',
-                $staff->designation ?? 'N/A',
-                $staff->user_level?->name ?? 'N/A',
-                $staff->roles?->first()?->name ?? 'No Role',
-                $staff->is_active ? 'Active' : 'Inactive',
-                $staff->created_at?->format('Y-m-d H:i:s') ?? 'N/A',
-            ];
-        })->toArray();
+        return $this->data; 
     }
 
     public function headings(): array

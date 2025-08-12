@@ -452,7 +452,8 @@ const filteredLeaves = computed(() => {
     const typeMatch = !typeFilter.value || leave.leave_type_id === parseInt(typeFilter.value)
     const employeeMatch = !employeeFilter.value || leave.user_id === parseInt(employeeFilter.value)
     const searchMatch = !searchQuery.value || 
-      leave.user.first_name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      leave.user.firstname?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      leave.user.lastname?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       leave.leave_type.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       leave.reason?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       leave.user.email.toLowerCase().includes(searchQuery.value.toLowerCase())
@@ -471,23 +472,38 @@ const stats = computed(() => {
 
 const filteredHistory = computed(() => {
   const leaves = props.leaves.data
+  
   const now = new Date()
   const daysAgo = new Date(now.setDate(now.getDate() - parseInt(historyTimeFilter.value)))
 
-  return leaves.filter(leave => {
-    const statusMatch = historyFilter.value === 'all' || 
+  const filtered = leaves.filter(leave => {
+    // For history, we want leaves that are approved or rejected
+    const statusMatch = leave.status === 'approved' || leave.status === 'rejected'
+    
+    // Filter by approval action if specified
+    const actionMatch = historyFilter.value === 'all' || 
       leave.approvals?.some(a => a.status === historyFilter.value)
     
+    // Filter by time period - check if any approval action was within the time period
     const timeMatch = leave.approvals?.some(a => 
-      new Date(a.action_date) >= daysAgo
-    )
+      a.action_date && new Date(a.action_date) >= daysAgo
+    ) || true // If no action_date, show all
 
-    return statusMatch && timeMatch
+    const result = statusMatch && actionMatch && timeMatch
+    
+    return result
   }).sort((a, b) => {
-    const aDate = new Date(Math.max(...a.approvals.map(ap => new Date(ap.action_date))))
-    const bDate = new Date(Math.max(...b.approvals.map(ap => new Date(ap.action_date))))
+    // Sort by the most recent approval action date
+    const aDate = a.approvals?.length > 0 ? 
+      new Date(Math.max(...a.approvals.map(ap => new Date(ap.action_date || 0)))) : 
+      new Date(0)
+    const bDate = b.approvals?.length > 0 ? 
+      new Date(Math.max(...b.approvals.map(ap => new Date(ap.action_date || 0)))) : 
+      new Date(0)
     return bDate - aDate
   })
+  
+  return filtered
 })
 
 const formatDate = (date) => {

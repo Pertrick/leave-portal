@@ -33,7 +33,21 @@ interface DashboardData {
     type: string;
     days: number;
     start_date: string;
+    end_date: string;
     status: string;
+    user_name: string;
+    user_id: number;
+  }>;
+  teamLeaves: Array<{
+    id: number;
+    type: string;
+    days: number;
+    start_date: string;
+    end_date: string;
+    status: string;
+    user_name: string;
+    user_id: number;
+    is_own_leave: boolean;
   }>;
   calendarDays: Array<{
     date: string;
@@ -90,6 +104,7 @@ const pendingRequests = ref<number>(0);
 const upcomingLeaves = ref<number>(0);
 const teamMembers = ref<DashboardData['teamMembers']>([]);
 const recentRequests = ref<DashboardData['recentRequests']>([]);
+const teamLeaves = ref<DashboardData['teamLeaves']>([]);
 const leaveDistribution = ref<DashboardData['leaveDistribution']>([]);
 const monthlyTrends = ref<DashboardData['monthlyTrends']>([]);
 const statusOverview = ref<DashboardData['statusOverview']>([]);
@@ -224,6 +239,20 @@ const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const { formatDate } = useDateFormat();
 const { parseLocalDate } = useDateFormat();
 
+const formatEventDate = (date: Date): string => {
+  if (!date) return 'Invalid date';
+  
+  try {
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch {
+    return 'Invalid date';
+  }
+};
+
 const isWeekend = (date: string) => {
   const day = new Date(date).getDay();
   return day === 0 || day === 6;
@@ -319,12 +348,12 @@ onMounted(async () => {
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
     const data: DashboardData = await response.json();
-    console.log('Dashboard data fetched:', data);
     totalAvailableDays.value = data.totalAvailableDays;
     pendingRequests.value = data.pendingRequests;
     upcomingLeaves.value = data.upcomingLeaves;
     teamMembers.value = data.teamMembers;
     recentRequests.value = data.recentRequests;
+    teamLeaves.value = data.teamLeaves || [];
     leaveDistribution.value = data.leaveDistribution;
     monthlyTrends.value = data.monthlyTrends;
     statusOverview.value = data.statusOverview;
@@ -334,22 +363,20 @@ onMounted(async () => {
     // Convert data to calendar events
     const events: any[] = [];
     
-    // Add leave events
-    recentRequests.value.forEach(request => {
-      if (request.status === 'approved') {
-        const startDate = new Date(request.start_date);
-        const endDate = new Date(request.start_date);
-        endDate.setDate(endDate.getDate() + request.days - 1);
-        
-        events.push({
-          id: `leave-${request.id}`,
-          title: `${request.type} Leave`,
-          startDate: startDate.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
-          classes: ['leave-event', `leave-${request.type.toLowerCase().replace(/\s+/g, '-')}`],
-          color: getLeaveEventColor(request.type)
-        });
-      }
+    // Add team leave events (including own leaves)
+    teamLeaves.value.forEach(leave => {
+      const startDate = new Date(leave.start_date);
+      const endDate = new Date(leave.end_date);
+      
+      events.push({
+        id: `leave-${leave.id}`,
+        title: `${leave.user_name} - ${leave.type} Leave`,
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+        classes: ['leave-event', `leave-${leave.type.toLowerCase().replace(/\s+/g, '-')}`],
+        color: getLeaveEventColor(leave.type),
+        leaveData: leave // Store the full leave data for modal
+      });
     });
 
     // Add holiday events
@@ -361,7 +388,8 @@ onMounted(async () => {
           startDate: day.date,
           endDate: day.date,
           classes: ['holiday-event'],
-          color: '#10b981' // emerald-500
+          color: '#10b981', // emerald-500
+          holidayData: { name: 'Public Holiday', date: day.date }
         });
       }
     });
@@ -715,6 +743,10 @@ onUnmounted(() => {
                                     <div class="h-3 w-3 rounded" style="background-color: #10b981;"></div>
                                     <span class="text-gray-600 dark:text-gray-400">Holiday</span>
                                 </div>
+                                <div class="flex items-center space-x-2">
+                                    <div class="h-3 w-3 rounded" style="background-color: #6366f1;"></div>
+                                    <span class="text-gray-600 dark:text-gray-400">Other Leave Types</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -837,30 +869,40 @@ onUnmounted(() => {
                 <div class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                     <div class="flex justify-between">
                         <span>Start Date:</span>
-                        <span class="font-medium text-gray-900 dark:text-white">{{ formatDate(selectedEvent.startDate) }}</span>
+                        <span class="font-medium text-gray-900 dark:text-white">{{ formatEventDate(selectedEvent.startDate) }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span>End Date:</span>
-                        <span class="font-medium text-gray-900 dark:text-white">{{ formatDate(selectedEvent.endDate) }}</span>
+                        <span class="font-medium text-gray-900 dark:text-white">{{ formatEventDate(selectedEvent.endDate) }}</span>
                     </div>
                     
-                    <div v-if="selectedEvent.id.startsWith('leave-')" class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <div v-if="selectedEvent.id.startsWith('leave-') && selectedEvent.leaveData" class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-between">
+                            <span>Employee:</span>
+                            <span class="font-medium text-gray-900 dark:text-white">{{ selectedEvent.leaveData.user_name }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Leave Type:</span>
+                            <span class="font-medium text-gray-900 dark:text-white">{{ selectedEvent.leaveData.type }}</span>
+                        </div>
                         <div class="flex justify-between">
                             <span>Duration:</span>
-                            <span class="font-medium text-gray-900 dark:text-white">
-                                {{ Math.ceil((new Date(selectedEvent.endDate).getTime() - new Date(selectedEvent.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1 }} days
-                            </span>
+                            <span class="font-medium text-gray-900 dark:text-white">{{ selectedEvent.leaveData.days }} days</span>
                         </div>
                         <div class="flex justify-between">
                             <span>Status:</span>
-                            <span class="font-medium text-emerald-600 dark:text-emerald-400">Approved</span>
+                            <span class="font-medium text-emerald-600 dark:text-emerald-400">{{ selectedEvent.leaveData.status }}</span>
+                        </div>
+                        <div v-if="selectedEvent.leaveData.is_own_leave" class="flex justify-between">
+                            <span>Type:</span>
+                            <span class="font-medium text-blue-600 dark:text-blue-400">Your Leave</span>
                         </div>
                     </div>
                     
-                    <div v-if="selectedEvent.id.startsWith('holiday-')" class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <div v-if="selectedEvent.id.startsWith('holiday-') && selectedEvent.holidayData" class="pt-2 border-t border-gray-200 dark:border-gray-700">
                         <div class="flex justify-between">
                             <span>Type:</span>
-                            <span class="font-medium text-gray-900 dark:text-white">Public Holiday</span>
+                            <span class="font-medium text-gray-900 dark:text-white">{{ selectedEvent.holidayData.name }}</span>
                         </div>
                     </div>
                 </div>

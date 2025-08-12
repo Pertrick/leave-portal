@@ -198,7 +198,8 @@ class StaffController extends Controller
 
     public function export()
     {
-        $query = User::with(['department', 'userLevel', 'roles']);
+        $query = User::select('id', 'staff_id', 'firstname', 'lastname', 'email', 'department_id', 'user_level_id', 'designation', 'is_active', 'created_at')
+                    ->with(['department', 'userLevel', 'roles']);
 
         // Search
         if (request('search')) {

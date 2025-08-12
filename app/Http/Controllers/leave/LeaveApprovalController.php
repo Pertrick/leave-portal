@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Leave;
 
 use App\Http\Controllers\Controller;
 use App\Models\Leave;
+use App\Models\LeaveType;
 use App\Models\User;
 use App\Services\LeaveApplicationService;
 use App\Services\NotificationService;
@@ -21,36 +22,98 @@ class LeaveApprovalController extends Controller
     ) {
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $this->authorize('view_leaves');
+        $tab = $request->get('tab', 'pending');
         
-        $user = auth()->user();
-        $query = Leave::with(['user.department', 'leaveType', 'approvals.user'])
-            ->where('status', 'pending');
+        $query = Leave::with(['user.department', 'leaveType', 'approvals.approver', 'approvals.approvalLevel']);
+
+        // Filter based on tab (pending vs history)
+        if ($tab === 'pending') {
+            $query->where('status', 'pending');
+        } else {
+            // History tab - show approved and rejected leaves
+            $query->whereIn('status', ['approved', 'rejected']);
+        }
 
         // Filter based on user role and permissions
-        if ($user->hasRole('admin') || $user->hasRole('hr')) {
-            // Admin and HR can see all pending leaves
-        } elseif ($user->hasRole('hod')) {
-            // HOD can see leaves from their department
-            $query->whereHas('user.department', function ($q) use ($user) {
-                $q->where('id', $user->department_id);
+        if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('hr')) {
+            // Admin and HR can see all leaves
+        } elseif (auth()->user()->hasRole('hod')) {
+            // HOD can see leaves where they are assigned as approver
+            $query->whereHas('approvals', function ($q) use ($tab) {
+                $q->where('approver_id', auth()->user()->id);
+                if ($tab === 'pending') {
+                    $q->where('status', 'pending');
+                } else {
+                    $q->whereIn('status', ['approved', 'rejected']);
+                }
             });
-        } elseif ($user->hasRole('supervisor')) {
-            // Supervisor can see leaves from users they supervise
-            $query->whereHas('user.activeSupervisors', function ($q) use ($user) {
-                $q->where('supervisor_id', $user->id);
+        } elseif (auth()->user()->hasRole('supervisor')) {
+            // Supervisor can see leaves where they are assigned as approver
+            $query->whereHas('approvals', function ($q) use ($tab) {
+                $q->where('approver_id', auth()->user()->id);
+                if ($tab === 'pending') {
+                    $q->where('status', 'pending');
+                } else {
+                    $q->whereIn('status', ['approved', 'rejected']);
+                }
             });
         } else {
             // Regular users can only see their own leaves
-            $query->where('user_id', $user->id);
+            $query->where('user_id', auth()->user()->id);
+        }
+
+        // Apply additional filters
+        if ($request->filled('type')) {
+            $query->where('leave_type_id', $request->type);
+        }
+        
+        if ($request->filled('employee')) {
+            $query->where('user_id', $request->employee);
+        }
+        
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('user', function ($userQuery) use ($search) {
+                    $userQuery->where('firstname', 'like', "%{$search}%")
+                        ->orWhere('lastname', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                })
+                ->orWhereHas('leaveType', function ($typeQuery) use ($search) {
+                    $typeQuery->where('name', 'like', "%{$search}%");
+                })
+                ->orWhere('reason', 'like', "%{$search}%");
+            });
         }
 
         $leaves = $query->latest()->paginate(15);
 
+        // Get leave types for filter dropdown
+        $leaveTypes = \App\Models\LeaveType::orderBy('name')->get(['id', 'name']);
+
+        // Get employees for filter dropdown (only for admin/HR/HOD)
+        $employees = collect();
+        if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('hr')) {
+            $employees = User::orderBy('firstname')->get(['id', 'firstname', 'lastname', 'email']);
+        } elseif (auth()->user()->hasRole('hod')) {
+            // HOD can see employees in their department
+            $employees = User::where('department_id', auth()->user()->department_id)
+                ->orderBy('firstname')
+                ->get(['id', 'firstname', 'lastname', 'email']);
+        }
+
         return Inertia::render('leave/Approvals/Index', [
             'leaves' => $leaves,
+            'leaveTypes' => $leaveTypes,
+            'employees' => $employees,
+            'filters' => [
+                'tab' => $tab,
+                'type' => $request->get('type'),
+                'employee' => $request->get('employee'),
+                'search' => $request->get('search'),
+            ]
         ]);
     }
 

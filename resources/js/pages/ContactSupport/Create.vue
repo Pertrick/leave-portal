@@ -1,9 +1,9 @@
 <template>
   <AppLayout title="New Support Request">
     <template #header-actions>
-      <Button @click="$inertia.visit(route('contact-support.index'))" variant="outline">
-        Back to Requests
-      </Button>
+        <Button @click="$inertia.visit(route('contact-support.index'))" variant="outline">
+          Back to Requests
+        </Button>
     </template>
 
     <div class="py-8">
@@ -28,66 +28,66 @@
                   <!-- Subject Field -->
                   <div class="space-y-2">
                     <Label for="subject" class="text-sm font-semibold text-gray-700">Subject *</Label>
-                    <Input
-                      id="subject"
-                      v-model="form.subject"
-                      placeholder="Brief description of your issue"
+                <Input
+                  id="subject"
+                  v-model="form.subject"
+                  placeholder="Brief description of your issue"
                       class="h-12 text-base"
-                      required
-                    />
+                  required
+                />
                     <p v-if="form.errors.subject" class="text-red-500 text-sm">
-                      {{ form.errors.subject }}
-                    </p>
-                  </div>
+                  {{ form.errors.subject }}
+                </p>
+              </div>
 
                   <!-- Category and Priority Row -->
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="space-y-2">
                       <Label for="category" class="text-sm font-semibold text-gray-700">Category *</Label>
                       <SelectInput v-model="form.category" required class="h-12 text-base">
-                        <option value="">Select a category</option>
-                        <option v-for="(label, value) in categories" :key="value" :value="value">
-                          {{ label }}
-                        </option>
+                  <option value="">Select a category</option>
+                  <option v-for="(label, value) in categories" :key="value" :value="value">
+                    {{ label }}
+                  </option>
                       </SelectInput>
                       <p v-if="form.errors.category" class="text-red-500 text-sm">
-                        {{ form.errors.category }}
-                      </p>
-                    </div>
+                  {{ form.errors.category }}
+                </p>
+              </div>
 
                     <div class="space-y-2">
                       <Label for="priority" class="text-sm font-semibold text-gray-700">Priority *</Label>
                       <SelectInput v-model="form.priority" required class="h-12 text-base">
-                        <option value="">Select priority level</option>
-                        <option v-for="(label, value) in priorities" :key="value" :value="value">
-                          {{ label }}
-                        </option>
+                  <option value="">Select priority level</option>
+                  <option v-for="(label, value) in priorities" :key="value" :value="value">
+                    {{ label }}
+                  </option>
                       </SelectInput>
                       <p v-if="form.errors.priority" class="text-red-500 text-sm">
-                        {{ form.errors.priority }}
-                      </p>
+                  {{ form.errors.priority }}
+                </p>
                     </div>
-                  </div>
+              </div>
 
                   <!-- Message Field -->
                   <div class="space-y-2">
                     <Label for="message" class="text-sm font-semibold text-gray-700">Message *</Label>
-                    <Textarea
-                      id="message"
-                      v-model="form.message"
-                      placeholder="Please provide detailed information about your issue or question..."
+                <Textarea
+                  id="message"
+                  v-model="form.message"
+                  placeholder="Please provide detailed information about your issue or question..."
                       rows="8"
                       class="text-base resize-none"
-                      required
-                    />
+                  required
+                />
                     <div class="flex justify-between items-center">
                       <p v-if="form.errors.message" class="text-red-500 text-sm">
-                        {{ form.errors.message }}
-                      </p>
+                  {{ form.errors.message }}
+                </p>
                       <p class="text-gray-500 text-sm">
-                        {{ form.message.length }}/2000 characters
-                      </p>
-                    </div>
+                  {{ form.message.length }}/2000 characters
+                </p>
+              </div>
                   </div>
 
                   <!-- File Attachments -->
@@ -137,20 +137,20 @@
                       class="h-12 px-8 text-base font-semibold bg-blue-600 hover:bg-blue-700"
                     >
                       <LoaderCircle v-if="form.processing" class="w-5 h-5 animate-spin mr-2" />
-                      Submit Request
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      @click="$inertia.visit(route('contact-support.index'))"
+                  Submit Request
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  @click="$inertia.visit(route('contact-support.index'))"
                       class="h-12 px-8 text-base"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
           </div>
 
           <!-- Sidebar Help Information -->
@@ -181,7 +181,7 @@
                     <div class="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
                     <span>Provide context about when it occurs</span>
                   </li>
-                </ul>
+                  </ul>
               </CardContent>
             </Card>
 
@@ -206,8 +206,8 @@
                   <div class="flex items-center justify-between">
                     <span class="text-sm text-gray-600">Business Days</span>
                     <span class="text-sm font-semibold text-gray-900">Mon-Fri</span>
-                  </div>
                 </div>
+              </div>
               </CardContent>
             </Card>
 
@@ -236,10 +236,10 @@
                   <div class="flex items-center justify-between">
                     <span class="text-gray-600">Urgent</span>
                     <span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">Critical problems</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
           </div>
         </div>
       </div>

@@ -25,11 +25,16 @@ const props = defineProps<{
     navigation: NavigationItem[];
 }>();
 
+const emit = defineEmits<{
+    'sidebar-toggle': [collapsed: boolean];
+}>();
+
 const isCollapsed = ref(false);
 const openDropdowns = ref(new Set<number>());
 
 const toggleSidebar = () => {
     isCollapsed.value = !isCollapsed.value;
+    emit('sidebar-toggle', isCollapsed.value);
 };
 
 const toggleDropdown = (id: number) => {
@@ -46,7 +51,6 @@ const isDropdownOpen = (id: number) => {
 
 const currentPath = computed(() => {
     const path = usePage().url;
-    console.log('Current path:', path);
     return path;
 });
 
@@ -70,26 +74,33 @@ const getIcon = (iconName?: string) => {
     return iconMap[iconName as keyof typeof iconMap] || null;
 };
 
+const basePath = usePage().props.basePath as string;
+
 const getFullPath = (item: NavigationItem): string => {
     if (!item.path) return '#';
-    if (item.path.startsWith('/')) {
-        return item.path;
-    }
-    const fullPath = `/${item.path}`;
-    console.log('Full path for item:', item.title, fullPath);
-    return fullPath;
+
+    // Ensure no double slashes
+    const normalizedPath = item.path.startsWith('/') ? item.path : `/${item.path}`;
+    const normalizedBase = basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;
+
+    return `${normalizedBase}${normalizedPath}`;
+};
+
+
+const stripBasePath = (url: string) => {
+    return url.startsWith(basePath) ? url.slice(basePath.length) : url;
 };
 
 const isActive = (item: NavigationItem): boolean => {
-    const fullPath = getFullPath(item);
-    const isActive = currentPath.value === fullPath || currentPath.value.startsWith(fullPath);
-    console.log('Checking active state for:', item.title, {
-        fullPath,
-        currentPath: currentPath.value,
-        isActive
-    });
+    const fullPath = getFullPath(item); 
+    const relativeFullPath = stripBasePath(fullPath);
+    const current = currentPath.value;
+
+    const isActive = current === relativeFullPath || current.startsWith(relativeFullPath);
+
     return isActive;
 };
+
 
 const getChildItems = (parentId: number) => {
     const parent = props.navigation.find(item => item.id === parentId);

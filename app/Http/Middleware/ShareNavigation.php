@@ -39,6 +39,7 @@ class ShareNavigation
             Inertia::share([
                 'navigation' => $navigation,
                 'breadcrumbs' => $currentPathItems,
+                'basePath' => config('app.url')
             ]);
         } else {
             Log::info('No user found in ShareNavigation middleware');

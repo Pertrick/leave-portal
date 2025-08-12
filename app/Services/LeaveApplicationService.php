@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use App\Models\LeaveBalance;
 use App\Models\ApprovalLevel;
 use App\Models\LeaveApproval;
+use App\Models\Supervisor;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -89,12 +90,8 @@ class LeaveApplicationService
         try {
             DB::beginTransaction();
 
-            if (isset($data['attachment']) && $data['attachment'] instanceof UploadedFile) {
-                $data['attachment'] = $this->fileUploadService->upload(
-                    $data['attachment'],
-                    'leave-attachments'
-                );
-            }
+            // Handle file upload
+            $data = $this->handleFileUpload($data);
             
             // Create the leave record
             $leave = $user->leaves()->create([
@@ -113,6 +110,93 @@ class LeaveApplicationService
                 'attachment' => $data['attachment'] ?? null
             ]);
 
+            // Create approval records
+            $leave = $this->createApprovalRecords($leave, $user);
+
+            DB::commit();
+            return $leave;
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+
+    }
+
+    /**
+     * Update a leave application
+     *
+     * @param Leave $leave
+     * @param array $data
+     * @return Leave
+     */
+    public function update(Leave $leave, array $data): Leave
+    {
+        $startDate = Carbon::parse($data['start_date']);
+        $endDate = Carbon::parse($data['end_date']);
+        $leaveType = LeaveType::findOrFail($data['leave_type_id']);
+        $user = Auth::user();
+
+        // Validate user assignments
+        $this->validateUserAssignments($user);
+
+        // Validate dates
+        $this->validateLeaveDates($startDate, $endDate, $user->location_id);
+
+        // Calculate calendar days (including holidays)
+        $calendarDays = $startDate->diffInDays($endDate) + 1;
+
+        // Calculate working days (excluding weekends and holidays)
+        $workingDays = $this->calculateWorkingDays($startDate, $endDate, $leaveType);
+
+        // Validate leave balance
+        $this->validateLeaveBalance($user, $data['leave_type_id'], $workingDays);
+
+        // Get holidays in the date range
+        $holidays = $this->getHolidaysBetween($startDate, $endDate);
+
+        try {
+            DB::beginTransaction();
+
+            // Handle file upload
+            $data = $this->handleFileUpload($data, $leave);
+
+            // Update the leave record
+            $leave->update([
+                'user_id' => $user->id,
+                'leave_type_id' => $data['leave_type_id'],
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'reason' => $data['reason'],
+                'calendar_days' => $calendarDays,
+                'working_days' => $workingDays,
+                'status' => 'pending',
+                'applicant_comment' => $data['applicant_comment'],
+                'replacement_staff_name' => $data['replacement_staff_name'],
+                'replacement_staff_phone' => $data['replacement_staff_phone'],
+                'holidays' => $holidays->pluck('name')->toArray(),
+                'attachment' => $data['attachment'] ?? $leave->attachment
+            ]);
+
+            // Delete existing approval records and recreate them
+            $leave->approvals()->delete();
+            
+            // Create new approval records
+            $leave = $this->createApprovalRecords($leave, $user);
+
+            DB::commit();
+            return $leave;
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::info($e->getMessage());
+            throw $e;
+        }
+    }
+
+
+
+    private function createApprovalRecords(Leave $leave, User $user): Leave {
             // Get all active approval levels ordered by level
             $approvalLevels = ApprovalLevel::where('is_active', true)
                 ->orderBy('level')
@@ -178,56 +262,20 @@ class LeaveApplicationService
                 }
             }
 
-            DB::commit();
             return $leave;
-            
-        } catch(\Exception $e) {
-            DB::rollBack();
-            throw $e;
-        }
-    
     }
 
     /**
-     * Update a leave application
+     * Handle file upload for leave applications
      *
-     * @param Leave $leave
      * @param array $data
-     * @return Leave
+     * @param Leave|null $leave
+     * @return array
      */
-    public function update(Leave $leave, array $data): Leave
-    {
-        $startDate = Carbon::parse($data['start_date']);
-        $endDate = Carbon::parse($data['end_date']);
-        $leaveType = LeaveType::findOrFail($data['leave_type_id']);
-        $user = Auth::user();
-
-        // Validate user assignments
-        $this->validateUserAssignments($user);
-
-        // Validate dates
-        $this->validateLeaveDates($startDate, $endDate, $user->location_id);
-
-        // Calculate calendar days (including holidays)
-        $calendarDays = $startDate->diffInDays($endDate) + 1;
-
-        // Calculate working days (excluding weekends and holidays)
-        $workingDays = $this->calculateWorkingDays($startDate, $endDate, $leaveType);
-
-        // Validate leave balance
-        $this->validateLeaveBalance($user, $data['leave_type_id'], $workingDays);
-
-        // Get holidays in the date range
-        $holidays = $this->getHolidaysBetween($startDate, $endDate);
-
-        try {
-            DB::beginTransaction();
-            // Update the leave record
-
-              // Handle file upload if present
+    private function handleFileUpload(array $data, ?Leave $leave = null): array {
         if (isset($data['attachment']) && $data['attachment'] instanceof UploadedFile) {
             // Delete old file if exists
-            if ($leave->attachment) {
+            if ($leave && $leave->attachment) {
                 $this->fileUploadService->delete($leave->attachment);
             }
             
@@ -236,72 +284,8 @@ class LeaveApplicationService
                 'leave-attachments'
             );
         }
-           $leave->update([
-                'user_id' => $user->id,
-                'leave_type_id' => $data['leave_type_id'],
-                'start_date' => $startDate,
-                'end_date' => $endDate,
-                'reason' => $data['reason'],
-                'calendar_days' => $calendarDays,
-                'working_days' => $workingDays,
-                'status' => 'pending',
-                'applicant_comment' => $data['applicant_comment'],
-                'replacement_staff_name' => $data['replacement_staff_name'],
-                'replacement_staff_phone' => $data['replacement_staff_phone'],
-                'holidays' => $holidays->pluck('name')->toArray(),
-                'attachment' => $data['attachment'] ?? null
-            ]);
 
-            // Get all active approval levels ordered by level
-            $approvalLevels = ApprovalLevel::where('is_active', true)
-                ->orderBy('level')
-                ->get();
-
-            if ($approvalLevels->isEmpty()) {
-                throw new \InvalidArgumentException('No approval levels found.');
-            }
-
-            // Create leave approval records for each level
-            foreach ($approvalLevels as $level) {
-                // Get approvers for this level
-                $approvers = $this->getApprovers($level);
-                
-                if ($approvers->isEmpty()) {
-                    throw new \InvalidArgumentException("No approvers found for level {$level->name}");
-                }
-
-                foreach ($approvers as $approver) {
-                        if(!$leave->approvals()->where('level_id', $level->id)->where('user_id', $user->id)->where('approver_id', $approver->id)->exists()) {
-                          $leaveApproval = $leave->approvals()->create([
-                        'user_id' => $user->id,
-                        'approver_id' => $approver->id,
-                        'status' => 'pending',
-                        'sequence' => $level->level,
-                        'level_id' => $level->id
-                    ]);
-
-                            $leaveApproval->update([
-                                'current_approval_id' => $leaveApproval->id
-                            ]);
-                        }
-                }
-            }
-
-            // Set the current approval level to the level of the first actual approval record
-            $firstLevel = $firstApproval->approvalLevel; // get the actual level of the first approval record
-            $leave->update([
-                'current_approval_level' => $firstLevel->name,
-            ]);
-
-            DB::commit();
-            return $leave;
-            
-        } catch(\Exception $e) {
-            DB::rollBack();
-            Log::info($e->getMessage());
-            throw $e;
-        }
-      
+        return $data;
     }
 
     /**
@@ -374,7 +358,7 @@ class LeaveApplicationService
                     }
                 }
             }
-        } catch(\Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Leave date validation failed: ' . $e->getMessage(), [
                 'start_date' => $startDate->toDateString(),
                 'end_date' => $endDate->toDateString(),
@@ -418,7 +402,7 @@ class LeaveApplicationService
             DB::commit();
             return $leave;
             
-        } catch(\Exception $e) {
+        } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
         }
@@ -465,7 +449,7 @@ class LeaveApplicationService
                     ->where('year', Carbon::parse($leave->start_date)->year)
                     ->first();
                     
-                if($leaveBalance) {
+                if ($leaveBalance) {
                     $newDaysTaken = $leaveBalance->days_taken + $leave->working_days;
                     $newDaysRemaining = $leaveBalance->days_remaining - $leave->working_days;
                     
@@ -597,7 +581,7 @@ class LeaveApplicationService
             $endDate = Carbon::parse($data['end_date']);
             $leaveType = LeaveType::findOrFail($data['leave_type_id']);
             
-            $data['working_days'] = $this->calculateWorkingDays($startDate, $endDate,  $leaveType);
+            $data['working_days'] = $this->calculateWorkingDays($startDate, $endDate, $leaveType);
         } else {
             $data['calendar_days'] = 0;
             $data['working_days'] = 0;
@@ -757,10 +741,16 @@ class LeaveApplicationService
         
         // For supervisor level, get the user's assigned supervisor
         if ($level->role_name === 'supervisor') {
-            return User::whereHas('supervisedUsers', function ($query) use ($user) {
-                $query->where('user_id', $user->id)
-                    ->where('is_active', true);
-            })->get();
+            // Get the supervisor assigned to this user using the Supervisor model
+            $supervisor = Supervisor::where('user_id', $user->id)
+                ->where('is_active', true)
+                ->first();
+            
+            if ($supervisor) {
+                return collect([$supervisor->supervisor]);
+            }
+            
+            return collect();
         }
         
         // For HOD level, get the current active head
